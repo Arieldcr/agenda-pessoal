@@ -1,0 +1,26 @@
+# Ambiente virtual do Python (cada pessoa cria o seu)
+.venv/
+venv/
+
+# Arquivos temporários do Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Segredos: senhas, tokens e chaves nunca vão para o GitHub
+.env
+.env.*
+!.env.example
+
+# Banco de dados local (contém seus dados pessoais)
+*.db
+*.sqlite
+*.sqlite3
+
+# Dependências do Node (caso usemos React no futuro)
+node_modules/
+
+# Configurações do editor e arquivos do sistema
+.vscode/
+Thumbs.db
+desktop.ini

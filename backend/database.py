@@ -8,12 +8,14 @@ DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 DB_PATH = DATA_DIR / "agenda.db"
 
+# Mude para True para ver no terminal o SQL que o SQLModel gera (útil para estudar).
+MOSTRAR_SQL = False
+
 # O "motor" é quem sabe se conectar ao banco.
-# echo=True mostra no terminal o SQL que o SQLModel gera (útil para aprender).
 engine = create_engine(
     f"sqlite:///{DB_PATH.as_posix()}",
     connect_args={"check_same_thread": False},
-    echo=True,
+    echo=MOSTRAR_SQL,
 )
 
 

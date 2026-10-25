@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend import database
@@ -38,3 +38,11 @@ def cadastrar_tarefa(dados: TarefaCriar):
 @app.get("/tarefas", response_model=list[database.Tarefa])
 def listar_tarefas():
     return database.listar_tarefas()
+
+
+@app.get("/tarefas/{tarefa_id}", response_model=database.Tarefa)
+def buscar_tarefa(tarefa_id: int):
+    tarefa = database.buscar_tarefa(tarefa_id)
+    if tarefa is None:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    return tarefa

@@ -47,3 +47,9 @@ def listar_tarefas() -> list[Tarefa]:
     """Devolve todas as tarefas gravadas."""
     with Session(engine) as sessao:
         return list(sessao.exec(select(Tarefa)).all())
+
+
+def buscar_tarefa(tarefa_id: int) -> Tarefa | None:
+    """Devolve a tarefa com esse id, ou None se ela não existir."""
+    with Session(engine) as sessao:
+        return sessao.get(Tarefa, tarefa_id)

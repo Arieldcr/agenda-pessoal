@@ -28,6 +28,10 @@ class Tarefa(SQLModel, table=True):
     concluida: bool = False
 
 
+# NOVO: campos que o usuário pode alterar. O id nunca entra aqui.
+CAMPOS_EDITAVEIS = {"titulo", "descricao", "concluida"}
+
+
 def criar_tabelas() -> None:
     """Cria as tabelas no banco, se ainda não existirem."""
     SQLModel.metadata.create_all(engine)
@@ -53,3 +57,19 @@ def buscar_tarefa(tarefa_id: int) -> Tarefa | None:
     """Devolve a tarefa com esse id, ou None se ela não existir."""
     with Session(engine) as sessao:
         return sessao.get(Tarefa, tarefa_id)
+
+
+# NOVO
+def atualizar_tarefa(tarefa_id: int, campos: dict) -> Tarefa | None:
+    """Altera só os campos informados. Devolve None se a tarefa não existir."""
+    with Session(engine) as sessao:
+        tarefa = sessao.get(Tarefa, tarefa_id)
+        if tarefa is None:
+            return None
+        for nome, valor in campos.items():
+            if nome not in CAMPOS_EDITAVEIS:
+                raise ValueError(f"Campo não editável: {nome}")
+            setattr(tarefa, nome, valor)
+        sessao.commit()
+        sessao.refresh(tarefa)
+        return tarefa

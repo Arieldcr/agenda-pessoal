@@ -28,7 +28,7 @@ class Tarefa(SQLModel, table=True):
     concluida: bool = False
 
 
-# NOVO: campos que o usuário pode alterar. O id nunca entra aqui.
+# Campos que o usuário pode alterar. O id nunca entra aqui.
 CAMPOS_EDITAVEIS = {"titulo", "descricao", "concluida"}
 
 
@@ -59,7 +59,6 @@ def buscar_tarefa(tarefa_id: int) -> Tarefa | None:
         return sessao.get(Tarefa, tarefa_id)
 
 
-# NOVO
 def atualizar_tarefa(tarefa_id: int, campos: dict) -> Tarefa | None:
     """Altera só os campos informados. Devolve None se a tarefa não existir."""
     with Session(engine) as sessao:

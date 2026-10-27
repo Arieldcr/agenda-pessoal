@@ -72,3 +72,14 @@ def atualizar_tarefa(tarefa_id: int, campos: dict) -> Tarefa | None:
         sessao.commit()
         sessao.refresh(tarefa)
         return tarefa
+
+
+def excluir_tarefa(tarefa_id: int) -> bool:
+    """Apaga a tarefa. Devolve True se apagou e False se ela não existia."""
+    with Session(engine) as sessao:
+        tarefa = sessao.get(Tarefa, tarefa_id)
+        if tarefa is None:
+            return False
+        sessao.delete(tarefa)
+        sessao.commit()
+        return True   

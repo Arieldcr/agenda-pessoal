@@ -72,3 +72,9 @@ def atualizar_tarefa(tarefa_id: int, dados: TarefaAtualizar):
     if tarefa is None:
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
     return tarefa
+
+
+@app.delete("/tarefas/{tarefa_id}", status_code=204)
+def excluir_tarefa(tarefa_id: int):
+    if not database.excluir_tarefa(tarefa_id):
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")

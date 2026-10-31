@@ -2,7 +2,7 @@
 
 Aplicação web para organizar compromissos, tarefas e rotina pessoal, desenvolvida para uso próprio e executada localmente.
 
-> **Status:** em desenvolvimento. Hoje a API permite cadastrar, listar, buscar, atualizar e excluir tarefas, com os dados salvos em um banco SQLite local. Ainda não há interface gráfica.
+> **Status:** em desenvolvimento. Hoje a API permite cadastrar, listar, buscar, atualizar e excluir tarefas, com os dados salvos em um banco SQLite local, e conta com testes automatizados. Ainda não há interface gráfica.
 
 ## Objetivo
 
@@ -33,6 +33,7 @@ Regras:
 - Python 3.12
 - FastAPI e Uvicorn
 - SQLModel e SQLite
+- pytest e httpx2 (testes)
 - Git e GitHub
 
 ## Estrutura do projeto
@@ -40,10 +41,15 @@ Regras:
 ```
 agenda-pessoal/
   backend/
-    main.py        rotas da API e validação dos dados de entrada
-    database.py    conexão com o banco, tabela e funções de acesso aos dados
-  data/            criada automaticamente; guarda o agenda.db (não versionado)
-  requirements.txt
+    main.py              rotas da API e validação dos dados de entrada
+    database.py          conexão com o banco, tabela e funções de acesso aos dados
+  tests/
+    conftest.py          banco temporário automático e cliente de testes
+    test_*.py            testes da API, divididos por assunto
+  data/                  criada automaticamente; guarda o agenda.db (não versionado)
+  pytest.ini             configuração do pytest
+  requirements.txt       dependências para rodar a API
+  requirements-dev.txt   dependências de desenvolvimento (inclui as da API e as dos testes)
   README.md
 ```
 
@@ -70,10 +76,23 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 
 Para estudar o SQL gerado, troque `MOSTRAR_SQL` para `True` em `backend/database.py` (e volte para `False` depois).
 
+## Testes
+
+Com o ambiente virtual ativo, instale as dependências de desenvolvimento e rode a suíte:
+
+```powershell
+pip install -r requirements-dev.txt
+python -m pytest -v
+```
+
+Os testes cobrem o ciclo de vida das tarefas (cadastrar, listar, buscar, atualizar e excluir), os erros `404` para ids inexistentes e as validações de entrada (`422`).
+
+Eles **nunca usam o banco real**: a cada teste, o banco é trocado por um arquivo temporário, criado e descartado pelo próprio `pytest`. Um teste específico vigia essa regra. Por isso o `data/agenda.db` não é lido nem alterado pela suíte.
+
 ## Limitações atuais
 
 - Uso local e de um único usuário, sem autenticação.
-- Não há testes automatizados: as operações foram testadas manualmente pela documentação interativa.
+- Os testes são executados manualmente, sem integração contínua.
 
 ## Princípios do projeto
 
@@ -85,7 +104,7 @@ Para estudar o SQL gerado, troque `MOSTRAR_SQL` para `True` em `backend/database
 
 ## Próximas etapas (planejadas)
 
-Categorias, prioridades e durações; histórico de alterações; relatórios; lembretes; interface gráfica; testes automatizados. Nada disso está implementado ainda.
+Categorias, prioridades e durações; histórico de alterações; relatórios; lembretes; interface gráfica. Nada disso está implementado ainda.
 
 ## Autor
 

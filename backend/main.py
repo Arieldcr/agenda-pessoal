@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from backend import database
@@ -78,3 +80,9 @@ def atualizar_tarefa(tarefa_id: int, dados: TarefaAtualizar):
 def excluir_tarefa(tarefa_id: int):
     if not database.excluir_tarefa(tarefa_id):
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+
+
+# O frontend (HTML, CSS e JavaScript) é entregue em /app/.
+# O mount fica por último, para não interferir nas rotas da API.
+PASTA_FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
+app.mount("/app", StaticFiles(directory=PASTA_FRONTEND, html=True), name="frontend")

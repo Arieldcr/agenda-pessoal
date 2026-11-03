@@ -1,13 +1,149 @@
+/* ===== Tokens: as cores e o fundo ficam aqui, em um lugar só ===== */
+:root {
+  --bg: #050c20;
+  --bg2: #0a1636;
+  --card: rgba(18, 38, 92, 0.34);
+  --side: rgba(8, 18, 48, 0.3);
+  --line: rgba(120, 160, 255, 0.24);
+  --text: #e8eeff;
+  --muted: #9fb0d6;
+  --primary: #2563ff;
+  --green: #16c79a;
+  --purple: #8b5cf6;
+  --amber: #f5b324;
+  --red: #ef4444;
+  --sky: #38bdf8;
+  --scene:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 260' preserveAspectRatio='none'%3E%3Cpolygon points='0,260 0,130 140,70 260,120 420,40 600,130 760,80 920,135 1100,55 1260,120 1440,80 1440,260' fill='%230e1d45'/%3E%3Cpolygon points='0,260 0,180 200,125 380,175 600,115 820,180 1040,120 1240,175 1440,140 1440,260' fill='%2313275c'/%3E%3C/svg%3E")
+      bottom / 100% 260px no-repeat,
+    radial-gradient(
+      circle 440px at 92% 6%,
+      #0b2c70 0,
+      #0b2c70 350px,
+      rgba(120, 190, 255, 0.95) 360px,
+      rgba(60, 120, 255, 0.35) 385px,
+      transparent 440px
+    ),
+    radial-gradient(1px 1px at 9% 12%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 31% 7%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(
+      1.5px 1.5px at 52% 16%,
+      rgba(255, 255, 255, 0.6),
+      transparent
+    ),
+    radial-gradient(1px 1px at 22% 38%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 68% 44%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(
+      900px 600px at 10% 100%,
+      rgba(124, 77, 255, 0.2),
+      transparent 60%
+    ),
+    var(--bg);
+}
+
+:root[data-tema="claro"] {
+  --bg: #eaf1ff;
+  --bg2: #dbe7ff;
+  --card: rgba(255, 255, 255, 0.55);
+  --side: rgba(255, 255, 255, 0.45);
+  --line: rgba(37, 99, 255, 0.22);
+  --text: #0d1b3d;
+  --muted: #4a5d88;
+  --scene:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 260' preserveAspectRatio='none'%3E%3Cpolygon points='0,260 0,130 140,70 260,120 420,40 600,130 760,80 920,135 1100,55 1260,120 1440,80 1440,260' fill='%23c3d5fb'/%3E%3Cpolygon points='0,260 0,180 200,125 380,175 600,115 820,180 1040,120 1240,175 1440,140 1440,260' fill='%23a9c2f5'/%3E%3C/svg%3E")
+      bottom / 100% 260px no-repeat,
+    radial-gradient(
+      circle 440px at 92% 6%,
+      #bcd3ff 0,
+      #bcd3ff 350px,
+      rgba(37, 99, 255, 0.35) 360px,
+      rgba(37, 99, 255, 0.12) 385px,
+      transparent 440px
+    ),
+    var(--bg);
+}
+
+/* ===== Base ===== */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+}
+
 body {
   margin: 0;
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  background: #050c20;
-  color: #e8eeff;
+  color: var(--text);
   font-family: "Segoe UI", system-ui, sans-serif;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
-main {
+/* O fundo é fixo e fica atrás de tudo. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--scene);
+}
+
+:focus-visible {
+  outline: 2px solid var(--sky);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ===== Componentes ===== */
+.vidro {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.botao {
+  height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--primary);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ===== Página de teste desta etapa ===== */
+.pagina {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.cartao {
+  padding: 32px 40px;
   text-align: center;
+}
+
+.cartao h1 {
+  margin: 0 0 8px;
+}
+
+.cartao p {
+  margin: 0 0 20px;
+  color: var(--muted);
 }

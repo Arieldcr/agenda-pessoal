@@ -2,9 +2,9 @@
 :root {
   --bg: #050c20;
   --bg2: #0a1636;
-  --card: rgba(18, 38, 92, 0.34);
+  --card: rgba(70, 110, 220, 0.08);
   --side: rgba(8, 18, 48, 0.3);
-  --line: rgba(120, 160, 255, 0.24);
+  --line: rgba(160, 190, 255, 0.3);
   --text: #e8eeff;
   --muted: #9fb0d6;
   --primary: #2563ff;
@@ -44,7 +44,7 @@
 :root[data-tema="claro"] {
   --bg: #eaf1ff;
   --bg2: #dbe7ff;
-  --card: rgba(255, 255, 255, 0.55);
+  --card: rgba(255, 255, 255, 0.28);
   --side: rgba(255, 255, 255, 0.45);
   --line: rgba(37, 99, 255, 0.22);
   --text: #0d1b3d;
@@ -104,7 +104,13 @@ body::before {
 
 /* ===== Componentes ===== */
 .vidro {
-  background: var(--card);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.12),
+      rgba(255, 255, 255, 0.02) 50%
+    ),
+    var(--card);
   border: 1px solid var(--line);
   border-radius: 16px;
   backdrop-filter: blur(14px) saturate(140%);

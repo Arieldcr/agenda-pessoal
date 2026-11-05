@@ -132,24 +132,285 @@ body::before {
   cursor: pointer;
 }
 
-/* ===== Página de teste desta etapa ===== */
-.pagina {
+/* ===== Estrutura da tela ===== */
+.app {
+  display: grid;
+  grid-template-columns: 206px minmax(0, 1fr);
+  gap: 16px;
   min-height: 100vh;
+  padding: 16px;
+}
+
+/* --- Menu lateral --- */
+.menu {
+  position: sticky;
+  top: 16px;
+  align-self: start;
+  height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 12px;
+  background: var(--side);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 10px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.logo svg {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  color: var(--primary);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.nav a svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.nav a:hover {
+  color: var(--text);
+  background: rgba(120, 160, 255, 0.12);
+}
+
+.nav a.ativo {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(37, 99, 255, 0.45);
+}
+
+.etiqueta {
+  margin-left: auto;
+  padding: 2px 7px;
+  border: 1px dashed var(--muted);
+  border-radius: 99px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.espaco {
+  flex: 1;
+}
+
+.caixa {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(120, 160, 255, 0.06);
+  font-size: 13px;
+}
+
+.incentivo {
+  text-align: center;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.incentivo svg {
+  width: 26px;
+  height: 26px;
+  margin-bottom: 6px;
+  color: var(--sky);
+}
+
+.interruptor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(120, 160, 255, 0.06);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.interruptor i {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 99px;
+  background: var(--muted);
+  transition: background 0.2s;
+}
+
+.interruptor i::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+
+.interruptor[aria-checked="true"] i {
+  background: var(--primary);
+}
+
+.interruptor[aria-checked="true"] i::after {
+  transform: translateX(16px);
+}
+
+.usuario {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
   display: grid;
   place-items: center;
-  padding: 24px;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--purple));
+  color: #fff;
+  font-weight: 700;
 }
 
-.cartao {
-  padding: 32px 40px;
-  text-align: center;
+.usuario strong {
+  display: block;
 }
 
-.cartao h1 {
-  margin: 0 0 8px;
-}
-
-.cartao p {
-  margin: 0 0 20px;
+.usuario small {
   color: var(--muted);
+  font-size: 11px;
+}
+
+/* --- Conteúdo: grade de 12 colunas --- */
+.conteudo {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  align-content: start;
+  min-width: 0;
+}
+
+.bloco {
+  min-height: 120px;
+  padding: 18px 20px;
+}
+
+.bloco h2 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
+.bloco p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.tracejado {
+  border-style: dashed;
+}
+
+.cabecalho {
+  grid-column: 1 / -1;
+}
+
+.indicador {
+  grid-column: span 3;
+}
+
+.tarefas {
+  grid-column: span 8;
+  min-height: 320px;
+}
+
+.lateral {
+  grid-column: span 4;
+  grid-row: span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lateral .bloco {
+  flex: 1;
+}
+
+.atividades {
+  grid-column: span 8;
+}
+
+/* --- Telas menores (conferimos na etapa 8) --- */
+@media (max-width: 1100px) {
+  .indicador {
+    grid-column: span 6;
+  }
+
+  .tarefas,
+  .atividades,
+  .lateral {
+    grid-column: 1 / -1;
+  }
+
+  .lateral {
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .menu {
+    position: static;
+    height: auto;
+  }
+
+  .nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .espaco,
+  .incentivo,
+  .etiqueta {
+    display: none;
+  }
+
+  .indicador {
+    grid-column: 1 / -1;
+  }
 }

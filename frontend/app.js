@@ -10,7 +10,7 @@ const data = {
 };
 
 // ===== Tema claro e escuro =====
-const CHAVE_TEMA = "gtake-tema";
+const CHAVE_TEMA = "kaizen-tema";
 
 function lerTemaSalvo() {
   try {
@@ -24,7 +24,7 @@ function aplicarTema(tema) {
   document.documentElement.dataset.tema = tema;
   document
     .getElementById("botao-tema")
-    .setAttribute("aria-pressed", String(tema === "claro"));
+    .setAttribute("aria-checked", String(tema === "escuro"));
   try {
     localStorage.setItem(CHAVE_TEMA, tema);
   } catch (erro) {

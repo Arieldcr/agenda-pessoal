@@ -4,19 +4,104 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>G.take</title>
+  <title>Kaizen</title>
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
 </head>
 
 <body>
-  <main class="pagina">
-    <section class="vidro cartao">
-      <h1>G.take</h1>
-      <p id="estado">Conectando à API...</p>
-      <button id="botao-tema" class="botao" type="button" aria-pressed="false">Alternar tema</button>
-    </section>
-  </main>
+  <div class="app">
+    <aside class="menu" aria-label="Menu lateral">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 5l14 14M19 5L5 19" />
+        </svg>
+        Kaizen
+      </div>
+      <nav class="nav" aria-label="Navegação principal">
+        <a href="#" class="ativo" aria-current="page"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 10l7-6 7 6v7H3z" />
+          </svg>Início</a>
+        <a href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 4h14v13H3zM6 10l3 3 5-6" />
+          </svg>Tarefas</a>
+        <a href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 5h14v12H3zM3 9h14M7 3v4M13 3v4" />
+          </svg>Calendário</a>
+        <a href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 17V9M10 17V4M16 17v-6" />
+          </svg>Relatórios<span class="etiqueta">em breve</span></a>
+        <a href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="10" cy="10" r="3" />
+            <path d="M10 2v3M10 15v3M2 10h3M15 10h3M4.5 4.5l2 2M13.5 13.5l2 2M15.5 4.5l-2 2M6.5 13.5l-2 2" />
+          </svg>Configurações<span class="etiqueta">em breve</span></a>
+        <a href="#"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="10" cy="10" r="7" />
+            <path d="M10 9v5M10 6.5v.5" />
+          </svg>Sobre</a>
+      </nav>
+      <div class="espaco"></div>
+      <div class="caixa incentivo">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10 2c3 2 4 5 4 8l-2 3H8l-2-3c0-3 1-6 4-8zM8 13l-2 3 2-.5M12 13l2 3-2-.5" />
+          <circle cx="10" cy="8" r="1.3" />
+        </svg>
+        <div>Grandes conquistas começam com um bom planejamento.</div>
+      </div>
+      <button id="botao-tema" class="interruptor" type="button" role="switch" aria-checked="true">
+        <span>Modo escuro</span><i aria-hidden="true"></i>
+      </button>
+      <div class="caixa usuario">
+        <span class="avatar" aria-hidden="true">A</span>
+        <div><strong>Ariel</strong><small>Dados salvos neste computador</small></div>
+      </div>
+    </aside>
+
+    <main class="conteudo">
+      <header class="vidro bloco cabecalho">
+        <h2>Cabeçalho</h2>
+        <p>Busca, saudação, data e hora, e notificações (etapa 3).</p>
+      </header>
+
+      <section class="vidro bloco indicador" aria-labelledby="t-total">
+        <h2 id="t-total">Total de tarefas</h2>
+        <p>Indicador (etapa 3).</p>
+      </section>
+      <section class="vidro bloco indicador" aria-labelledby="t-concluidas">
+        <h2 id="t-concluidas">Concluídas</h2>
+        <p>Indicador (etapa 3).</p>
+      </section>
+      <section class="vidro bloco indicador" aria-labelledby="t-pendentes">
+        <h2 id="t-pendentes">Pendentes</h2>
+        <p>Indicador (etapa 3).</p>
+      </section>
+      <section class="vidro bloco indicador tracejado" aria-labelledby="t-semana">
+        <h2 id="t-semana">Nesta semana</h2>
+        <p>Depende de datas nas tarefas, que a API ainda não tem.</p>
+      </section>
+
+      <section class="vidro bloco tarefas" aria-labelledby="t-tarefas">
+        <h2 id="t-tarefas">Minhas tarefas</h2>
+        <p id="estado">Conectando à API...</p>
+      </section>
+
+      <div class="lateral">
+        <section class="vidro bloco" aria-labelledby="t-assuntos">
+          <h2 id="t-assuntos">Sobre seus assuntos</h2>
+          <p>Progresso geral e resumos (etapa 6).</p>
+        </section>
+        <section class="vidro bloco" aria-labelledby="t-calendario">
+          <h2 id="t-calendario">Calendário</h2>
+          <p>Mês atual (etapa 5).</p>
+        </section>
+      </div>
+
+      <section class="vidro bloco atividades tracejado" aria-labelledby="t-atividades">
+        <h2 id="t-atividades">Atividades recentes</h2>
+        <p>Depende do histórico de alterações, previsto para um capítulo futuro.</p>
+      </section>
+    </main>
+  </div>
 </body>
 
 </html>

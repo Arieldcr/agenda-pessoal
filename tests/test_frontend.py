@@ -3,7 +3,7 @@ def test_pagina_inicial_do_frontend_e_entregue_em_app(client):
 
     assert resposta.status_code == 200
     assert resposta.headers["content-type"].startswith("text/html")
-    assert "G.take" in resposta.text
+    assert "Kaizen" in resposta.text
 
 
 def test_app_sem_barra_redireciona_para_app_com_barra(client):

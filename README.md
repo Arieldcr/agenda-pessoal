@@ -1,4 +1,6 @@
-# Assistente de Agenda Pessoal
+# Kaizen: Assistente de Agenda Pessoal
+
+_Kaizen_ (改善) é uma palavra japonesa que significa "melhoria contínua": melhorar um pouco a cada dia. É a ideia por trás deste projeto.
 
 Aplicação web para organizar compromissos, tarefas e rotina pessoal, desenvolvida para uso próprio e executada localmente.
 

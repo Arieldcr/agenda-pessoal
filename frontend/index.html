@@ -59,25 +59,67 @@
 
     <main class="conteudo">
       <header class="vidro bloco cabecalho">
-        <h2>Cabeçalho</h2>
-        <p>Busca, saudação, data e hora, e notificações (etapa 3).</p>
+        <div class="topo">
+          <label class="busca">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="9" cy="9" r="5.5" />
+              <path d="M13.5 13.5L17 17" />
+            </svg>
+            <input id="busca" type="search" placeholder="Buscar tarefas... (Ctrl + K)" aria-label="Buscar tarefas" autocomplete="off">
+          </label>
+          <button class="icone" type="button" disabled title="Notificações: em breve" aria-label="Notificações (em breve)"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 15h10l-1.5-2V9a3.5 3.5 0 00-7 0v4zM8.5 17h3" />
+            </svg></button>
+          <span class="avatar" aria-hidden="true">A</span>
+        </div>
+        <div class="boas-vindas">
+          <div>
+            <h1 id="saudacao">Olá, Ariel!</h1>
+            <p>Que tal organizar seu dia e tornar sua rotina ainda mais produtiva?</p>
+          </div>
+          <div class="relogio">
+            <span id="data">—</span>
+            <strong id="hora">--:--</strong>
+          </div>
+        </div>
       </header>
 
       <section class="vidro bloco indicador" aria-labelledby="t-total">
-        <h2 id="t-total">Total de tarefas</h2>
-        <p>Indicador (etapa 3).</p>
+        <span class="icone-kpi"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 4h14v13H3zM6 10l3 3 5-6" />
+          </svg></span>
+        <div class="texto">
+          <h2 id="t-total">Total de tarefas</h2><strong class="numero" id="kpi-total">—</strong>
+        </div>
+        <i class="tendencia" aria-hidden="true" title="Tendência: aparece quando houver histórico"></i>
       </section>
       <section class="vidro bloco indicador" aria-labelledby="t-concluidas">
-        <h2 id="t-concluidas">Concluídas</h2>
-        <p>Indicador (etapa 3).</p>
+        <span class="icone-kpi verde"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="10" cy="10" r="7" />
+            <path d="M6.5 10.5l2.5 2.5 4.5-5" />
+          </svg></span>
+        <div class="texto">
+          <h2 id="t-concluidas">Concluídas</h2><strong class="numero" id="kpi-concluidas">—</strong>
+        </div>
+        <i class="tendencia" aria-hidden="true" title="Tendência: aparece quando houver histórico"></i>
       </section>
       <section class="vidro bloco indicador" aria-labelledby="t-pendentes">
-        <h2 id="t-pendentes">Pendentes</h2>
-        <p>Indicador (etapa 3).</p>
+        <span class="icone-kpi roxo"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="10" cy="10" r="7" />
+            <path d="M10 6v4l3 2" />
+          </svg></span>
+        <div class="texto">
+          <h2 id="t-pendentes">Pendentes</h2><strong class="numero" id="kpi-pendentes">—</strong>
+        </div>
+        <i class="tendencia" aria-hidden="true" title="Tendência: aparece quando houver histórico"></i>
       </section>
       <section class="vidro bloco indicador tracejado" aria-labelledby="t-semana">
-        <h2 id="t-semana">Nesta semana</h2>
-        <p>Depende de datas nas tarefas, que a API ainda não tem.</p>
+        <span class="icone-kpi tracejado"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 5h14v12H3zM3 9h14M7 3v4M13 3v4" />
+          </svg></span>
+        <div class="texto">
+          <h2 id="t-semana">Nesta semana</h2><strong class="numero sem-dado">—</strong><small class="nota">Precisa de datas nas tarefas</small>
+        </div>
       </section>
 
       <section class="vidro bloco tarefas" aria-labelledby="t-tarefas">

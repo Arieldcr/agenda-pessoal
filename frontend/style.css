@@ -608,3 +608,114 @@ body::before {
   color: var(--muted);
   box-shadow: none;
 }
+
+/* ===== Lista de tarefas ===== */
+.lista {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 4px;
+  border-top: 1px solid var(--line);
+}
+
+.marca {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--sky);
+  border-radius: 50%;
+  color: #fff;
+}
+
+.marca svg {
+  width: 12px;
+  height: 12px;
+}
+
+.item.concluida .marca {
+  border-color: var(--green);
+  background: var(--green);
+}
+
+.titulo {
+  display: block;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.descricao {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.item.concluida .titulo {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+/* ===== Filtros ===== */
+.cabeca-lista {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.cabeca-lista h2 {
+  margin: 0;
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.filtro span {
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: rgba(120, 160, 255, 0.16);
+  font-size: 11px;
+}
+
+.filtro:hover {
+  color: var(--text);
+}
+
+.filtro.ativo {
+  border-color: transparent;
+  background: var(--primary);
+  color: #fff;
+  box-shadow: var(--glow);
+}
+
+.filtro.ativo span {
+  background: rgba(255, 255, 255, 0.22);
+}

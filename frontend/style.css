@@ -366,7 +366,7 @@ body::before {
 }
 
 .lateral .bloco {
-  flex: 1;
+  flex: 1 0 auto;
 }
 
 .atividades {
@@ -718,4 +718,131 @@ body::before {
 
 .filtro.ativo span {
   background: rgba(255, 255, 255, 0.22);
+}
+
+/* ===== Calendário ===== */
+.cabeca-calendario {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cabeca-calendario h2 {
+  margin: 0;
+}
+
+.nav-mes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.nav-mes button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.nav-mes button:hover {
+  box-shadow: var(--glow);
+}
+
+.grade-calendario {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+  font-size: 13px;
+}
+
+.dia-semana {
+  padding: 4px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dia {
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  width: min(100%, 44px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+.dia.fora {
+  color: var(--muted);
+  opacity: 0.5;
+}
+
+.dia.hoje {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: var(--glow);
+}
+
+/* ===== Progresso geral ===== */
+.progresso {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 12px 0;
+}
+
+.anel {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--primary) var(--percentual, 0%),
+    rgba(120, 160, 255, 0.18) 0
+  );
+  box-shadow: var(--glow);
+}
+
+.anel span {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--bg2);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.legenda {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.legenda strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.reservado {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 12px;
 }

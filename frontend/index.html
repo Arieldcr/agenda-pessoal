@@ -140,9 +140,17 @@
           <h2 id="t-assuntos">Sobre seus assuntos</h2>
           <p>Progresso geral e resumos (etapa 6).</p>
         </section>
-        <section class="vidro bloco" aria-labelledby="t-calendario">
-          <h2 id="t-calendario">Calendário</h2>
-          <p>Mês atual (etapa 5).</p>
+        <section class="vidro bloco" aria-labelledby="t-assuntos">
+          <h2 id="t-assuntos">Sobre seus assuntos</h2>
+          <div class="progresso">
+            <div class="anel" id="anel" role="img" aria-label="Progresso geral"><span id="anel-valor">0%</span></div>
+            <div class="legenda">
+              <span>Progresso geral</span>
+              <strong id="anel-texto">0 de 0 concluídas</strong>
+            </div>
+          </div>
+          <p class="reservado">Tarefas por assunto: aparece quando as tarefas tiverem categoria.</p>
+          <p class="reservado">Resumo do dia: aparece quando as tarefas tiverem data e hora.</p>
         </section>
       </div>
 

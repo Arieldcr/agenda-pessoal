@@ -192,6 +192,72 @@ function configurarFiltros() {
   });
 }
 
+// ===== Calendário =====
+const MESES_COMPLETOS = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+const INICIAIS_DIAS = ["D", "S", "T", "Q", "Q", "S", "S"];
+let mesExibido = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+function mostrarCalendario() {
+  const ano = mesExibido.getFullYear();
+  const mes = mesExibido.getMonth();
+  document.getElementById("titulo-mes").textContent =
+    `${MESES_COMPLETOS[mes]} de ${ano}`;
+
+  const celulas = INICIAIS_DIAS.map((letra) => {
+    const cabecalho = document.createElement("span");
+    cabecalho.className = "dia-semana";
+    cabecalho.textContent = letra;
+    return cabecalho;
+  });
+
+  const hoje = new Date().toDateString();
+  const deslocamento = new Date(ano, mes, 1).getDay();
+  for (let i = 0; i < 42; i++) {
+    const dia = new Date(ano, mes, 1 - deslocamento + i);
+    const celula = document.createElement("span");
+    celula.className = "dia";
+    if (dia.getMonth() !== mes) celula.classList.add("fora");
+    if (dia.toDateString() === hoje) celula.classList.add("hoje");
+    celula.textContent = dia.getDate();
+    celulas.push(celula);
+  }
+  document.getElementById("grade").replaceChildren(...celulas);
+}
+
+function mudarMes(delta) {
+  mesExibido = new Date(
+    mesExibido.getFullYear(),
+    mesExibido.getMonth() + delta,
+    1,
+  );
+  mostrarCalendario();
+}
+
+// ===== Painel Sobre seus assuntos =====
+function mostrarProgresso() {
+  const { total, concluidas } = calcularIndicadores(tarefasCarregadas);
+  const percentual = total === 0 ? 0 : Math.round((concluidas / total) * 100);
+  const anel = document.getElementById("anel");
+  anel.style.setProperty("--percentual", `${percentual}%`);
+  anel.setAttribute("aria-label", `Progresso geral: ${percentual}%`);
+  document.getElementById("anel-valor").textContent = `${percentual}%`;
+  document.getElementById("anel-texto").textContent =
+    `${concluidas} de ${total} concluídas`;
+}
+
 // ===== Início =====
 async function iniciar() {
   aplicarTema(lerTemaSalvo());
@@ -201,6 +267,14 @@ async function iniciar() {
   setInterval(atualizarRelogio, 15000);
   configurarAtalhoDeBusca();
   configurarFiltros();
+
+  mostrarCalendario();
+  document
+    .getElementById("mes-anterior")
+    .addEventListener("click", () => mudarMes(-1));
+  document
+    .getElementById("mes-seguinte")
+    .addEventListener("click", () => mudarMes(1));
 
   document.getElementById("busca").addEventListener("input", (evento) => {
     termoBusca = evento.target.value;
@@ -213,6 +287,7 @@ async function iniciar() {
     mostrarIndicadores(calcularIndicadores(tarefas));
     tarefasCarregadas = tarefas;
     mostrarContadores();
+    mostrarProgresso();
     mostrarLista();
     estado.textContent = `Conexão com a API funcionando: ${tarefas.length} tarefa(s) no banco.`;
   } catch (erro) {

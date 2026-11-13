@@ -138,10 +138,6 @@
       <div class="lateral">
         <section class="vidro bloco" aria-labelledby="t-assuntos">
           <h2 id="t-assuntos">Sobre seus assuntos</h2>
-          <p>Progresso geral e resumos (etapa 6).</p>
-        </section>
-        <section class="vidro bloco" aria-labelledby="t-assuntos">
-          <h2 id="t-assuntos">Sobre seus assuntos</h2>
           <div class="progresso">
             <div class="anel" id="anel" role="img" aria-label="Progresso geral"><span id="anel-valor">0%</span></div>
             <div class="legenda">
@@ -152,13 +148,25 @@
           <p class="reservado">Tarefas por assunto: aparece quando as tarefas tiverem categoria.</p>
           <p class="reservado">Resumo do dia: aparece quando as tarefas tiverem data e hora.</p>
         </section>
+        <section class="vidro bloco" aria-labelledby="t-calendario">
+          <div class="cabeca-calendario">
+            <h2 id="t-calendario">Calendário</h2>
+            <div class="nav-mes">
+              <button type="button" id="mes-anterior" aria-label="Mês anterior">‹</button>
+              <span id="titulo-mes"></span>
+              <button type="button" id="mes-seguinte" aria-label="Próximo mês">›</button>
+            </div>
+          </div>
+          <div class="grade-calendario" id="grade"></div>
+        </section>
       </div>
+  </div>
 
-      <section class="vidro bloco atividades tracejado" aria-labelledby="t-atividades">
-        <h2 id="t-atividades">Atividades recentes</h2>
-        <p>Depende do histórico de alterações, previsto para um capítulo futuro.</p>
-      </section>
-    </main>
+  <section class="vidro bloco atividades tracejado" aria-labelledby="t-atividades">
+    <h2 id="t-atividades">Atividades recentes</h2>
+    <p>Depende do histórico de alterações, previsto para um capítulo futuro.</p>
+  </section>
+  </main>
   </div>
 </body>
 

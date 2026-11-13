@@ -122,18 +122,24 @@
         </div>
       </section>
 
-      <section class="vidro bloco tarefas" aria-labelledby="t-tarefas">
-        <div class="cabeca-lista">
-          <h2 id="t-tarefas">Minhas tarefas</h2>
-          <div class="filtros" role="group" aria-label="Filtrar tarefas">
-            <button type="button" class="filtro ativo" data-filtro="todas" aria-pressed="true">Todas <span id="cont-todas">0</span></button>
-            <button type="button" class="filtro" data-filtro="pendentes" aria-pressed="false">Pendentes <span id="cont-pendentes">0</span></button>
-            <button type="button" class="filtro" data-filtro="concluidas" aria-pressed="false">Concluídas <span id="cont-concluidas">0</span></button>
+      <div class="principal">
+        <section class="vidro bloco tarefas" aria-labelledby="t-tarefas">
+          <div class="cabeca-lista">
+            <h2 id="t-tarefas">Minhas tarefas</h2>
+            <div class="filtros" role="group" aria-label="Filtrar tarefas">
+              <button type="button" class="filtro ativo" data-filtro="todas" aria-pressed="true">Todas <span id="cont-todas">0</span></button>
+              <button type="button" class="filtro" data-filtro="pendentes" aria-pressed="false">Pendentes <span id="cont-pendentes">0</span></button>
+              <button type="button" class="filtro" data-filtro="concluidas" aria-pressed="false">Concluídas <span id="cont-concluidas">0</span></button>
+            </div>
           </div>
-        </div>
-        <p id="estado">Conectando à API...</p>
-        <ul id="lista" class="lista"></ul>
-      </section>
+          <p id="estado">Conectando à API...</p>
+          <ul id="lista" class="lista"></ul>
+        </section>
+        <section class="vidro bloco atividades tracejado" aria-labelledby="t-atividades">
+          <h2 id="t-atividades">Atividades recentes</h2>
+          <p>Depende do histórico de alterações, previsto para um capítulo futuro.</p>
+        </section>
+      </div>
 
       <div class="lateral">
         <section class="vidro bloco" aria-labelledby="t-assuntos">
@@ -145,8 +151,7 @@
               <strong id="anel-texto">0 de 0 concluídas</strong>
             </div>
           </div>
-          <p class="reservado">Tarefas por assunto: aparece quando as tarefas tiverem categoria.</p>
-          <p class="reservado">Resumo do dia: aparece quando as tarefas tiverem data e hora.</p>
+          <p class="reservado">Por assunto e resumo do dia: aparecem quando as tarefas tiverem categoria, data e hora.</p>
         </section>
         <section class="vidro bloco" aria-labelledby="t-calendario">
           <div class="cabeca-calendario">
@@ -160,13 +165,12 @@
           <div class="grade-calendario" id="grade"></div>
         </section>
       </div>
-  </div>
 
-  <section class="vidro bloco atividades tracejado" aria-labelledby="t-atividades">
-    <h2 id="t-atividades">Atividades recentes</h2>
-    <p>Depende do histórico de alterações, previsto para um capítulo futuro.</p>
-  </section>
-  </main>
+      <section class="vidro bloco atividades tracejado" aria-labelledby="t-atividades">
+        <h2 id="t-atividades">Atividades recentes</h2>
+        <p>Depende do histórico de alterações, previsto para um capítulo futuro.</p>
+      </section>
+    </main>
   </div>
 </body>
 

@@ -846,3 +846,62 @@ body::before {
   color: var(--muted);
   font-size: 12px;
 }
+
+/* ===== Ajuste para caber na tela sem rolar ===== */
+.principal {
+  grid-column: span 8;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.principal .tarefas {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.principal .atividades {
+  min-height: 0;
+}
+
+.lateral {
+  grid-row: auto;
+}
+
+.lista {
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.indicador {
+  min-height: 0;
+}
+
+.cabecalho {
+  gap: 12px;
+}
+
+.boas-vindas h1 {
+  font-size: 28px;
+}
+
+.anel {
+  width: 80px;
+  height: 80px;
+}
+
+.anel span {
+  width: 60px;
+  height: 60px;
+  font-size: 16px;
+}
+
+.dia {
+  width: min(100%, 32px);
+}
+
+@media (max-width: 1100px) {
+  .principal {
+    grid-column: 1 / -1;
+  }
+}

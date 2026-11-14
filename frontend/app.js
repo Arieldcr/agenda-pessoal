@@ -59,6 +59,9 @@ const MESES = [
 ];
 
 function saudacaoDaHora(hora) {
+  if (hora < 5) {
+    return "Boa madrugada";
+  }
   if (hora < 12) {
     return "Bom dia";
   }

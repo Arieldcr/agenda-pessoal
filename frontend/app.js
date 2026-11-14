@@ -260,7 +260,33 @@ function mostrarProgresso() {
   document.getElementById("anel-texto").textContent =
     `${concluidas} de ${total} concluídas`;
 }
+// ===== Estados: carregando, erro e vazio =====
+function mostrarAviso(texto, erro = false) {
+  const aviso = document.getElementById("estado");
+  aviso.textContent = texto;
+  aviso.classList.toggle("erro", erro);
+  aviso.hidden = texto === "";
+}
 
+async function carregarTarefas() {
+  const botao = document.getElementById("tentar-novamente");
+  botao.hidden = true;
+  mostrarAviso("Carregando tarefas...");
+  try {
+    tarefasCarregadas = await data.listar();
+  } catch (erro) {
+    mostrarAviso(
+      "Não foi possível carregar as tarefas. Verifique se o servidor está rodando.",
+      true,
+    );
+    botao.hidden = false;
+    return;
+  }
+  mostrarIndicadores(calcularIndicadores(tarefasCarregadas));
+  mostrarContadores();
+  mostrarProgresso();
+  mostrarLista();
+}
 // ===== Início =====
 async function iniciar() {
   aplicarTema(lerTemaSalvo());
@@ -282,20 +308,19 @@ async function iniciar() {
   document.getElementById("busca").addEventListener("input", (evento) => {
     termoBusca = evento.target.value;
     mostrarLista();
+    if (tarefasCarregadas.length === 0) {
+      mostrarAviso("Nenhuma tarefa cadastrada ainda.");
+    } else if (ordenadas.length === 0) {
+      mostrarAviso("Nenhuma tarefa encontrada com esse filtro ou busca.");
+    } else {
+      mostrarAviso("");
+    }
   });
 
-  const estado = document.getElementById("estado");
-  try {
-    const tarefas = await data.listar();
-    mostrarIndicadores(calcularIndicadores(tarefas));
-    tarefasCarregadas = tarefas;
-    mostrarContadores();
-    mostrarProgresso();
-    mostrarLista();
-    estado.textContent = `Conexão com a API funcionando: ${tarefas.length} tarefa(s) no banco.`;
-  } catch (erro) {
-    estado.textContent = "Não foi possível falar com a API.";
-  }
+  document
+    .getElementById("tentar-novamente")
+    .addEventListener("click", carregarTarefas);
+  await carregarTarefas();
 }
 
 iniciar();

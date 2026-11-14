@@ -905,3 +905,33 @@ body::before {
     grid-column: 1 / -1;
   }
 }
+
+/* ===== Estados da lista ===== */
+.bloco .aviso {
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.bloco .aviso.erro {
+  color: #ff9b9b;
+}
+
+:root[data-tema="claro"] .bloco .aviso.erro {
+  color: #b42318;
+}
+
+.botao-pequeno {
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.botao-pequeno:hover {
+  box-shadow: var(--glow);
+}

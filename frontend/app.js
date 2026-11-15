@@ -10,6 +10,21 @@ const data = {
     }
     return resposta.json();
   },
+  async criar(titulo, descricao) {
+    const resposta = await fetch("/tarefas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ titulo, descricao: descricao || null }),
+    });
+    if (!resposta.ok) {
+      throw new Error(
+        resposta.status === 422
+          ? "Título inválido: use de 1 a 100 caracteres."
+          : "Não foi possível cadastrar a tarefa.",
+      );
+    }
+    return resposta.json();
+  },
 };
 
 // ===== Tema claro e escuro =====
@@ -170,6 +185,13 @@ function mostrarLista() {
     (a, b) => Number(a.concluida) - Number(b.concluida) || a.id - b.id,
   );
   document.getElementById("lista").replaceChildren(...ordenadas.map(criarItem));
+  if (tarefasCarregadas.length === 0) {
+    mostrarAviso("Nenhuma tarefa cadastrada ainda.");
+  } else if (ordenadas.length === 0) {
+    mostrarAviso("Nenhuma tarefa encontrada com esse filtro ou busca.");
+  } else {
+    mostrarAviso("");
+  }
 }
 
 function mostrarContadores() {
@@ -287,6 +309,40 @@ async function carregarTarefas() {
   mostrarProgresso();
   mostrarLista();
 }
+
+// ===== Nova tarefa =====
+function configurarNovaTarefa() {
+  const dialogo = document.getElementById("dialogo-tarefa");
+  const formulario = document.getElementById("form-tarefa");
+  const erro = document.getElementById("erro-form");
+
+  document.getElementById("nova-tarefa").addEventListener("click", () => {
+    formulario.reset();
+    erro.hidden = true;
+    dialogo.showModal();
+    document.getElementById("campo-titulo").focus();
+  });
+  document
+    .getElementById("cancelar-tarefa")
+    .addEventListener("click", () => dialogo.close());
+
+  formulario.addEventListener("submit", async (evento) => {
+    evento.preventDefault();
+    try {
+      await data.criar(
+        document.getElementById("campo-titulo").value,
+        document.getElementById("campo-descricao").value,
+      );
+    } catch (falha) {
+      erro.textContent = falha.message;
+      erro.hidden = false;
+      return;
+    }
+    dialogo.close();
+    await carregarTarefas();
+  });
+}
+
 // ===== Início =====
 async function iniciar() {
   aplicarTema(lerTemaSalvo());
@@ -296,6 +352,7 @@ async function iniciar() {
   setInterval(atualizarRelogio, 15000);
   configurarAtalhoDeBusca();
   configurarFiltros();
+  configurarNovaTarefa();
 
   mostrarCalendario();
   document
@@ -308,13 +365,10 @@ async function iniciar() {
   document.getElementById("busca").addEventListener("input", (evento) => {
     termoBusca = evento.target.value;
     mostrarLista();
-    if (tarefasCarregadas.length === 0) {
-      mostrarAviso("Nenhuma tarefa cadastrada ainda.");
-    } else if (ordenadas.length === 0) {
-      mostrarAviso("Nenhuma tarefa encontrada com esse filtro ou busca.");
-    } else {
-      mostrarAviso("");
-    }
+    document.getElementById("busca").addEventListener("input", (evento) => {
+      termoBusca = evento.target.value;
+      mostrarLista();
+    });
   });
 
   document

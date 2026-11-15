@@ -131,6 +131,7 @@
               <button type="button" class="filtro" data-filtro="pendentes" aria-pressed="false">Pendentes <span id="cont-pendentes">0</span></button>
               <button type="button" class="filtro" data-filtro="concluidas" aria-pressed="false">Concluídas <span id="cont-concluidas">0</span></button>
             </div>
+            <button type="button" id="nova-tarefa" class="botao">+ Nova tarefa</button>
           </div>
           <p id="estado" class="aviso">Carregando tarefas...</p>
           <button type="button" id="tentar-novamente" class="botao-pequeno" hidden>Tentar novamente</button>
@@ -170,6 +171,22 @@
 
     </main>
   </div>
+  <dialog id="dialogo-tarefa" class="dialogo" aria-labelledby="titulo-dialogo">
+    <form id="form-tarefa">
+      <h2 id="titulo-dialogo">Nova tarefa</h2>
+      <label>Título
+        <input id="campo-titulo" type="text" maxlength="100" required autocomplete="off">
+      </label>
+      <label>Descrição (opcional)
+        <textarea id="campo-descricao" rows="3"></textarea>
+      </label>
+      <p id="erro-form" class="erro" hidden></p>
+      <div class="acoes">
+        <button type="button" id="cancelar-tarefa" class="botao-pequeno">Cancelar</button>
+        <button type="submit" class="botao">Salvar</button>
+      </div>
+    </form>
+  </dialog>
 </body>
 
 </html>

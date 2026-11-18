@@ -10,22 +10,12 @@ const data = {
     }
     return resposta.json();
   },
+
   async criar(titulo, descricao) {
     const resposta = await fetch("/tarefas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ titulo, descricao: descricao || null }),
-      async atualizar(id, campos) {
-        const resposta = await fetch(`/tarefas/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(campos),
-        });
-        if (!resposta.ok) {
-          throw new Error("Não foi possível atualizar a tarefa.");
-        }
-        return resposta.json();
-      },
     });
     if (!resposta.ok) {
       throw new Error(
@@ -36,6 +26,7 @@ const data = {
     }
     return resposta.json();
   },
+
   async atualizar(id, campos) {
     const resposta = await fetch(`/tarefas/${id}`, {
       method: "PATCH",
@@ -43,11 +34,29 @@ const data = {
       body: JSON.stringify(campos),
     });
     if (!resposta.ok) {
-      throw new Error("Não foi possível atualizar a tarefa.");
+      throw new Error(
+        resposta.status === 422
+          ? "Título inválido: use de 1 a 100 caracteres."
+          : "Não foi possível atualizar a tarefa.",
+      );
     }
     return resposta.json();
   },
+
+  async excluir(id) {
+    const resposta = await fetch(`/tarefas/${id}`, { method: "DELETE" });
+    if (!resposta.ok && resposta.status !== 404) {
+      throw new Error("Não foi possível excluir a tarefa.");
+    }
+  },
 };
+
+// ===== Estado da tela =====
+let tarefasCarregadas = [];
+let filtroAtual = "todas";
+let termoBusca = "";
+let tarefaEmEdicao = null;
+let mesExibido = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
 // ===== Tema claro e escuro =====
 const CHAVE_TEMA = "kaizen-tema";
@@ -135,7 +144,7 @@ function configurarAtalhoDeBusca() {
   });
 }
 
-// ===== Indicadores: sempre calculados a partir da lista de tarefas =====
+// ===== Indicadores e progresso: sempre calculados a partir da lista =====
 function calcularIndicadores(tarefas) {
   const total = tarefas.length;
   const concluidas = tarefas.filter((tarefa) => tarefa.concluida).length;
@@ -149,9 +158,67 @@ function mostrarIndicadores(indicadores) {
   document.getElementById("kpi-pendentes").textContent = indicadores.pendentes;
 }
 
+function mostrarContadores() {
+  const { total, concluidas, pendentes } =
+    calcularIndicadores(tarefasCarregadas);
+  document.getElementById("cont-todas").textContent = total;
+  document.getElementById("cont-pendentes").textContent = pendentes;
+  document.getElementById("cont-concluidas").textContent = concluidas;
+}
+
+function mostrarProgresso() {
+  const { total, concluidas } = calcularIndicadores(tarefasCarregadas);
+  const percentual = total === 0 ? 0 : Math.round((concluidas / total) * 100);
+  const anel = document.getElementById("anel");
+  anel.style.setProperty("--percentual", `${percentual}%`);
+  anel.setAttribute("aria-label", `Progresso geral: ${percentual}%`);
+  document.getElementById("anel-valor").textContent = `${percentual}%`;
+  document.getElementById("anel-texto").textContent =
+    `${concluidas} de ${total} concluídas`;
+}
+
+// ===== Avisos da lista: carregando, erro e vazio =====
+function mostrarAviso(texto, erro = false) {
+  const aviso = document.getElementById("estado");
+  aviso.textContent = texto;
+  aviso.classList.toggle("erro", erro);
+  aviso.hidden = texto === "";
+}
+
+async function carregarTarefas() {
+  const botao = document.getElementById("tentar-novamente");
+  botao.hidden = true;
+  mostrarAviso("Carregando tarefas...");
+  try {
+    tarefasCarregadas = await data.listar();
+  } catch (erro) {
+    mostrarAviso(
+      "Não foi possível carregar as tarefas. Verifique se o servidor está rodando.",
+      true,
+    );
+    botao.hidden = false;
+    return;
+  }
+  mostrarIndicadores(calcularIndicadores(tarefasCarregadas));
+  mostrarContadores();
+  mostrarProgresso();
+  mostrarLista();
+}
+
 // ===== Lista de tarefas =====
 const ICONE_CHECK =
   '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6.5l2.5 2.5 4.5-5"/></svg>';
+const ICONE_EDITAR =
+  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 14l3-1 8-8-2-2-8 8z"/></svg>';
+const ICONE_EXCLUIR =
+  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h10M6 4V2h4v2M5 4l.5 9h5L11 4"/></svg>';
+
+function normalizar(texto) {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
 
 async function alternarConclusao(tarefa) {
   try {
@@ -161,6 +228,34 @@ async function alternarConclusao(tarefa) {
     return;
   }
   await carregarTarefas();
+}
+
+async function excluirTarefa(tarefa) {
+  if (
+    !window.confirm(
+      `Excluir a tarefa "${tarefa.titulo}"? Essa ação não pode ser desfeita.`,
+    )
+  ) {
+    return;
+  }
+  try {
+    await data.excluir(tarefa.id);
+  } catch (erro) {
+    mostrarAviso(erro.message, true);
+    return;
+  }
+  await carregarTarefas();
+}
+
+function criarBotaoAcao(rotulo, icone, aoClicar, classeExtra = "") {
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = `acao-item ${classeExtra}`.trim();
+  botao.setAttribute("aria-label", rotulo);
+  botao.title = rotulo;
+  botao.innerHTML = icone;
+  botao.addEventListener("click", aoClicar);
+  return botao;
 }
 
 function criarItem(tarefa) {
@@ -182,11 +277,11 @@ function criarItem(tarefa) {
   marca.addEventListener("click", () => alternarConclusao(tarefa));
 
   const corpo = document.createElement("div");
+  corpo.className = "corpo-item";
   const titulo = document.createElement("strong");
   titulo.className = "titulo";
   titulo.textContent = tarefa.titulo;
   corpo.appendChild(titulo);
-
   if (tarefa.descricao) {
     const descricao = document.createElement("small");
     descricao.className = "descricao";
@@ -194,19 +289,22 @@ function criarItem(tarefa) {
     corpo.appendChild(descricao);
   }
 
-  item.append(marca, corpo);
+  const acoes = document.createElement("div");
+  acoes.className = "acoes-item";
+  acoes.append(
+    criarBotaoAcao(`Editar: ${tarefa.titulo}`, ICONE_EDITAR, () =>
+      abrirDialogo(tarefa),
+    ),
+    criarBotaoAcao(
+      `Excluir: ${tarefa.titulo}`,
+      ICONE_EXCLUIR,
+      () => excluirTarefa(tarefa),
+      "perigo",
+    ),
+  );
+
+  item.append(marca, corpo, acoes);
   return item;
-}
-
-let tarefasCarregadas = [];
-let filtroAtual = "todas";
-let termoBusca = "";
-
-function normalizar(texto) {
-  return texto
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
 }
 
 function mostrarLista() {
@@ -223,6 +321,7 @@ function mostrarLista() {
     (a, b) => Number(a.concluida) - Number(b.concluida) || a.id - b.id,
   );
   document.getElementById("lista").replaceChildren(...ordenadas.map(criarItem));
+
   if (tarefasCarregadas.length === 0) {
     mostrarAviso("Nenhuma tarefa cadastrada ainda.");
   } else if (ordenadas.length === 0) {
@@ -230,14 +329,6 @@ function mostrarLista() {
   } else {
     mostrarAviso("");
   }
-}
-
-function mostrarContadores() {
-  const { total, concluidas, pendentes } =
-    calcularIndicadores(tarefasCarregadas);
-  document.getElementById("cont-todas").textContent = total;
-  document.getElementById("cont-pendentes").textContent = pendentes;
-  document.getElementById("cont-concluidas").textContent = concluidas;
 }
 
 function configurarFiltros() {
@@ -253,6 +344,58 @@ function configurarFiltros() {
       mostrarLista();
     });
   });
+}
+
+// ===== Janela de nova tarefa e de edição =====
+function abrirDialogo(tarefa = null) {
+  tarefaEmEdicao = tarefa;
+  document.getElementById("form-tarefa").reset();
+  document.getElementById("erro-form").hidden = true;
+  document.getElementById("titulo-dialogo").textContent = tarefa
+    ? "Editar tarefa"
+    : "Nova tarefa";
+  if (tarefa) {
+    document.getElementById("campo-titulo").value = tarefa.titulo;
+    document.getElementById("campo-descricao").value = tarefa.descricao || "";
+  }
+  document.getElementById("dialogo-tarefa").showModal();
+  document.getElementById("campo-titulo").focus();
+}
+
+function configurarDialogoDeTarefa() {
+  const dialogo = document.getElementById("dialogo-tarefa");
+  const erro = document.getElementById("erro-form");
+
+  document
+    .getElementById("nova-tarefa")
+    .addEventListener("click", () => abrirDialogo());
+  document
+    .getElementById("cancelar-tarefa")
+    .addEventListener("click", () => dialogo.close());
+
+  document
+    .getElementById("form-tarefa")
+    .addEventListener("submit", async (evento) => {
+      evento.preventDefault();
+      const titulo = document.getElementById("campo-titulo").value;
+      const descricao = document.getElementById("campo-descricao").value;
+      try {
+        if (tarefaEmEdicao) {
+          await data.atualizar(tarefaEmEdicao.id, {
+            titulo,
+            descricao: descricao.trim() === "" ? null : descricao,
+          });
+        } else {
+          await data.criar(titulo, descricao);
+        }
+      } catch (falha) {
+        erro.textContent = falha.message;
+        erro.hidden = false;
+        return;
+      }
+      dialogo.close();
+      await carregarTarefas();
+    });
 }
 
 // ===== Calendário =====
@@ -271,7 +414,6 @@ const MESES_COMPLETOS = [
   "Dezembro",
 ];
 const INICIAIS_DIAS = ["D", "S", "T", "Q", "Q", "S", "S"];
-let mesExibido = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
 function mostrarCalendario() {
   const ano = mesExibido.getFullYear();
@@ -309,78 +451,6 @@ function mudarMes(delta) {
   mostrarCalendario();
 }
 
-// ===== Painel Sobre seus assuntos =====
-function mostrarProgresso() {
-  const { total, concluidas } = calcularIndicadores(tarefasCarregadas);
-  const percentual = total === 0 ? 0 : Math.round((concluidas / total) * 100);
-  const anel = document.getElementById("anel");
-  anel.style.setProperty("--percentual", `${percentual}%`);
-  anel.setAttribute("aria-label", `Progresso geral: ${percentual}%`);
-  document.getElementById("anel-valor").textContent = `${percentual}%`;
-  document.getElementById("anel-texto").textContent =
-    `${concluidas} de ${total} concluídas`;
-}
-// ===== Estados: carregando, erro e vazio =====
-function mostrarAviso(texto, erro = false) {
-  const aviso = document.getElementById("estado");
-  aviso.textContent = texto;
-  aviso.classList.toggle("erro", erro);
-  aviso.hidden = texto === "";
-}
-
-async function carregarTarefas() {
-  const botao = document.getElementById("tentar-novamente");
-  botao.hidden = true;
-  mostrarAviso("Carregando tarefas...");
-  try {
-    tarefasCarregadas = await data.listar();
-  } catch (erro) {
-    mostrarAviso(
-      "Não foi possível carregar as tarefas. Verifique se o servidor está rodando.",
-      true,
-    );
-    botao.hidden = false;
-    return;
-  }
-  mostrarIndicadores(calcularIndicadores(tarefasCarregadas));
-  mostrarContadores();
-  mostrarProgresso();
-  mostrarLista();
-}
-
-// ===== Nova tarefa =====
-function configurarNovaTarefa() {
-  const dialogo = document.getElementById("dialogo-tarefa");
-  const formulario = document.getElementById("form-tarefa");
-  const erro = document.getElementById("erro-form");
-
-  document.getElementById("nova-tarefa").addEventListener("click", () => {
-    formulario.reset();
-    erro.hidden = true;
-    dialogo.showModal();
-    document.getElementById("campo-titulo").focus();
-  });
-  document
-    .getElementById("cancelar-tarefa")
-    .addEventListener("click", () => dialogo.close());
-
-  formulario.addEventListener("submit", async (evento) => {
-    evento.preventDefault();
-    try {
-      await data.criar(
-        document.getElementById("campo-titulo").value,
-        document.getElementById("campo-descricao").value,
-      );
-    } catch (falha) {
-      erro.textContent = falha.message;
-      erro.hidden = false;
-      return;
-    }
-    dialogo.close();
-    await carregarTarefas();
-  });
-}
-
 // ===== Início =====
 async function iniciar() {
   aplicarTema(lerTemaSalvo());
@@ -390,7 +460,7 @@ async function iniciar() {
   setInterval(atualizarRelogio, 15000);
   configurarAtalhoDeBusca();
   configurarFiltros();
-  configurarNovaTarefa();
+  configurarDialogoDeTarefa();
 
   mostrarCalendario();
   document
@@ -403,15 +473,11 @@ async function iniciar() {
   document.getElementById("busca").addEventListener("input", (evento) => {
     termoBusca = evento.target.value;
     mostrarLista();
-    document.getElementById("busca").addEventListener("input", (evento) => {
-      termoBusca = evento.target.value;
-      mostrarLista();
-    });
   });
-
   document
     .getElementById("tentar-novamente")
     .addEventListener("click", carregarTarefas);
+
   await carregarTarefas();
 }
 

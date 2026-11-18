@@ -1075,3 +1075,46 @@ body::before {
 .marca:hover {
   box-shadow: var(--glow);
 }
+
+/* ===== Ações de cada tarefa ===== */
+.corpo-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.acoes-item {
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
+
+.acao-item {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.acao-item svg {
+  width: 16px;
+  height: 16px;
+}
+
+.acao-item:hover {
+  background: rgba(120, 160, 255, 0.14);
+  color: var(--text);
+}
+
+.acao-item.perigo:hover {
+  color: #ff9b9b;
+}
+
+:root[data-tema="claro"] .acao-item.perigo:hover {
+  color: #b42318;
+}

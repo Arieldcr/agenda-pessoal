@@ -1063,3 +1063,15 @@ body::before {
   gap: 10px;
   margin-top: 8px;
 }
+
+/* ===== Círculo clicável ===== */
+.marca {
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.marca:hover {
+  box-shadow: var(--glow);
+}

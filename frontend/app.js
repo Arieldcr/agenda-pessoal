@@ -15,6 +15,17 @@ const data = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ titulo, descricao: descricao || null }),
+      async atualizar(id, campos) {
+        const resposta = await fetch(`/tarefas/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(campos),
+        });
+        if (!resposta.ok) {
+          throw new Error("Não foi possível atualizar a tarefa.");
+        }
+        return resposta.json();
+      },
     });
     if (!resposta.ok) {
       throw new Error(
@@ -22,6 +33,17 @@ const data = {
           ? "Título inválido: use de 1 a 100 caracteres."
           : "Não foi possível cadastrar a tarefa.",
       );
+    }
+    return resposta.json();
+  },
+  async atualizar(id, campos) {
+    const resposta = await fetch(`/tarefas/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(campos),
+    });
+    if (!resposta.ok) {
+      throw new Error("Não foi possível atualizar a tarefa.");
     }
     return resposta.json();
   },
@@ -131,17 +153,33 @@ function mostrarIndicadores(indicadores) {
 const ICONE_CHECK =
   '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6.5l2.5 2.5 4.5-5"/></svg>';
 
+async function alternarConclusao(tarefa) {
+  try {
+    await data.atualizar(tarefa.id, { concluida: !tarefa.concluida });
+  } catch (erro) {
+    mostrarAviso(erro.message, true);
+    return;
+  }
+  await carregarTarefas();
+}
+
 function criarItem(tarefa) {
   const item = document.createElement("li");
   item.className = tarefa.concluida ? "item concluida" : "item";
 
-  const marca = document.createElement("span");
+  const marca = document.createElement("button");
+  marca.type = "button";
   marca.className = "marca";
-  marca.setAttribute("role", "img");
-  marca.setAttribute("aria-label", tarefa.concluida ? "Concluída" : "Pendente");
+  marca.setAttribute(
+    "aria-label",
+    tarefa.concluida
+      ? `Reabrir: ${tarefa.titulo}`
+      : `Concluir: ${tarefa.titulo}`,
+  );
   if (tarefa.concluida) {
     marca.innerHTML = ICONE_CHECK;
   }
+  marca.addEventListener("click", () => alternarConclusao(tarefa));
 
   const corpo = document.createElement("div");
   const titulo = document.createElement("strong");

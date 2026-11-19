@@ -11,7 +11,10 @@ def test_atualizar_so_o_titulo_preserva_o_resto(client):
         "titulo": "Novo",
         "descricao": "Original",
         "concluida": False,
+        "dia": None,
+        "hora": None,
     }
+    
 
 
 def test_marcar_tarefa_como_concluida(client):
@@ -60,7 +63,10 @@ def test_atualizar_varios_campos_de_uma_vez(client):
         "titulo": "C",
         "descricao": "D",
         "concluida": True,
+        "dia": None,
+        "hora": None,
     }
+    
 
 
 def test_atualizacao_fica_gravada_no_banco(client):
@@ -71,3 +77,4 @@ def test_atualizacao_fica_gravada_no_banco(client):
 
     assert resposta.status_code == 200
     assert resposta.json()["titulo"] == "Depois"
+    

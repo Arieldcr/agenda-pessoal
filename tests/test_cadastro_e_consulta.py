@@ -9,7 +9,10 @@ def test_cadastrar_tarefa_devolve_201_e_a_tarefa(client):
         "titulo": "Estudar",
         "descricao": "Capítulo 4",
         "concluida": False,
+        "dia": None,
+        "hora": None,
     }
+   
 
 
 def test_tarefa_nasce_nao_concluida_e_descricao_e_opcional(client):
@@ -46,3 +49,4 @@ def test_buscar_tarefa_por_id(client):
 
     assert resposta.status_code == 200
     assert resposta.json() == criada
+    

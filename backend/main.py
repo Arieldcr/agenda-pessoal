@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
+from datetime import date, time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from backend import database
 
@@ -25,6 +26,14 @@ class TarefaCriar(BaseModel):
 
     titulo: str = Field(min_length=1, max_length=100)
     descricao: str | None = None
+    dia: date | None = None
+    hora: time | None = None
+
+    @model_validator(mode="after")
+    def hora_exige_dia(self):
+        if self.hora is not None and self.dia is None:
+            raise ValueError("a hora precisa de um dia: informe o dia junto com a hora")
+        return self
 
 
 class TarefaAtualizar(BaseModel):
@@ -35,6 +44,8 @@ class TarefaAtualizar(BaseModel):
     titulo: str | None = Field(default=None, min_length=1, max_length=100)
     descricao: str | None = None
     concluida: bool | None = None
+    dia: date | None = None
+    hora: time | None = None
 
     @field_validator("titulo", "concluida")
     @classmethod
@@ -51,7 +62,7 @@ def raiz():
 
 @app.post("/tarefas", response_model=database.Tarefa, status_code=201)
 def cadastrar_tarefa(dados: TarefaCriar):
-    return database.cadastrar_tarefa(dados.titulo, dados.descricao)
+    return database.cadastrar_tarefa(dados.titulo, dados.descricao, dados.dia, dados.hora)
 
 
 @app.get("/tarefas", response_model=list[database.Tarefa])
@@ -70,7 +81,10 @@ def buscar_tarefa(tarefa_id: int):
 @app.patch("/tarefas/{tarefa_id}", response_model=database.Tarefa)
 def atualizar_tarefa(tarefa_id: int, dados: TarefaAtualizar):
     campos = dados.model_dump(exclude_unset=True)
-    tarefa = database.atualizar_tarefa(tarefa_id, campos)
+    try:
+        tarefa = database.atualizar_tarefa(tarefa_id, campos)
+    except ValueError as erro:
+        raise HTTPException(status_code=422, detail=str(erro))
     if tarefa is None:
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
     return tarefa

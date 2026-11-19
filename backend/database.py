@@ -1,3 +1,4 @@
+from datetime import date, time
 from pathlib import Path
 
 from sqlmodel import Field, Session, SQLModel, create_engine, select
@@ -26,20 +27,38 @@ class Tarefa(SQLModel, table=True):
     titulo: str = Field(max_length=100)
     descricao: str | None = None
     concluida: bool = False
+    dia: date | None = None
+    hora: time | None = None
 
 
 # Campos que o usuário pode alterar. O id nunca entra aqui.
-CAMPOS_EDITAVEIS = {"titulo", "descricao", "concluida"}
+CAMPOS_EDITAVEIS = {"titulo", "descricao", "concluida", "dia", "hora"}
 
 
 def criar_tabelas() -> None:
-    """Cria as tabelas no banco, se ainda não existirem."""
+    """Cria as tabelas que faltam e acrescenta as colunas novas nas tabelas antigas."""
     SQLModel.metadata.create_all(engine)
+    _adicionar_colunas_novas()
 
 
-def cadastrar_tarefa(titulo: str, descricao: str | None = None) -> Tarefa:
+def _adicionar_colunas_novas() -> None:
+    """Migração simples: o create_all não altera tabelas que já existem."""
+    with engine.begin() as conexao:
+        colunas = {linha[1] for linha in conexao.exec_driver_sql("PRAGMA table_info(tarefa)")}
+        if "dia" not in colunas:
+            conexao.exec_driver_sql("ALTER TABLE tarefa ADD COLUMN dia DATE")
+        if "hora" not in colunas:
+            conexao.exec_driver_sql("ALTER TABLE tarefa ADD COLUMN hora TIME")
+
+
+def cadastrar_tarefa(
+    titulo: str,
+    descricao: str | None = None,
+    dia: date | None = None,
+    hora: time | None = None,
+) -> Tarefa:
     """Grava uma tarefa nova e a devolve já com o id gerado pelo banco."""
-    tarefa = Tarefa(titulo=titulo, descricao=descricao)
+    tarefa = Tarefa(titulo=titulo, descricao=descricao, dia=dia, hora=hora)
     with Session(engine) as sessao:
         sessao.add(tarefa)
         sessao.commit()
@@ -69,6 +88,9 @@ def atualizar_tarefa(tarefa_id: int, campos: dict) -> Tarefa | None:
             if nome not in CAMPOS_EDITAVEIS:
                 raise ValueError(f"Campo não editável: {nome}")
             setattr(tarefa, nome, valor)
+        if tarefa.hora is not None and tarefa.dia is None:
+            # Sai sem commit: nada do que foi alterado acima é gravado.
+            raise ValueError("A hora precisa de um dia: informe o dia junto com a hora.")
         sessao.commit()
         sessao.refresh(tarefa)
         return tarefa
@@ -82,4 +104,4 @@ def excluir_tarefa(tarefa_id: int) -> bool:
             return False
         sessao.delete(tarefa)
         sessao.commit()
-        return True   
+        return True

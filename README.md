@@ -4,7 +4,7 @@ _Kaizen_ (改善) é uma palavra japonesa que significa "melhoria contínua": me
 
 Aplicação web para organizar compromissos, tarefas e rotina pessoal, desenvolvida para uso próprio e executada localmente.
 
-> **Status:** em desenvolvimento. Hoje a API permite cadastrar, listar, buscar, atualizar e excluir tarefas, com os dados salvos em um banco SQLite local, e conta com testes automatizados. Ainda não há interface gráfica.
+> **Status:** em desenvolvimento. A API permite cadastrar, listar, buscar, atualizar e excluir tarefas, e há uma interface web para usá-las no navegador. A API e a entrega da interface têm testes automatizados.
 
 ## Objetivo
 
@@ -30,6 +30,18 @@ Regras:
 - Os dados continuam salvos depois de reiniciar o servidor.
 - A documentação interativa é gerada automaticamente em `/docs`.
 
+## Interface web
+
+Com o servidor rodando, abra http://127.0.0.1:8000/app/ no navegador. O painel permite:
+
+- ver o total, as concluídas e as pendentes, e o progresso geral;
+- listar as tarefas, filtrar (todas, pendentes e concluídas) e buscar por texto (atalho `Ctrl + K`);
+- criar, editar, marcar como concluída (ou reabrir) e excluir tarefas;
+- consultar o calendário do mês e alternar entre os temas escuro e claro;
+- usar a tela em celulares e janelas menores.
+
+Campos que a API ainda não tem (categoria, prioridade, data e hora) aparecem como espaços tracejados e entram em capítulos futuros. Por isso a lista mostra todas as tarefas em qualquer dia. A interface usa HTML, CSS e JavaScript puros, na pasta `frontend/`, entregue pelo próprio FastAPI.
+
 ## Tecnologias
 
 - Python 3.12
@@ -45,6 +57,10 @@ agenda-pessoal/
   backend/
     main.py              rotas da API e validação dos dados de entrada
     database.py          conexão com o banco, tabela e funções de acesso aos dados
+  frontend/
+    index.html           estrutura da página
+    style.css            visual (temas escuro e claro)
+    app.js               comportamento e comunicação com a API
   tests/
     conftest.py          banco temporário automático e cliente de testes
     test_*.py            testes da API, divididos por assunto
@@ -106,7 +122,7 @@ Eles **nunca usam o banco real**: a cada teste, o banco é trocado por um arquiv
 
 ## Próximas etapas (planejadas)
 
-Categorias, prioridades e durações; histórico de alterações; relatórios; lembretes; interface gráfica. Nada disso está implementado ainda.
+Data e hora nas tarefas (para ligar o calendário, o resumo do dia e o indicador "Nesta semana"); categorias, prioridades e durações; histórico de alterações; relatórios; lembretes. Nada disso está implementado ainda.
 
 ## Autor
 

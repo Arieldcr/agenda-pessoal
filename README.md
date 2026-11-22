@@ -4,7 +4,7 @@ _Kaizen_ (改善) é uma palavra japonesa que significa "melhoria contínua": me
 
 Aplicação web para organizar compromissos, tarefas e rotina pessoal, desenvolvida para uso próprio e executada localmente.
 
-> **Status:** em desenvolvimento. A API permite cadastrar, listar, buscar, atualizar e excluir tarefas, e há uma interface web para usá-las no navegador. A API e a entrega da interface têm testes automatizados.
+> **Status:** em desenvolvimento. A API e a interface web permitem organizar tarefas com dia, hora, duração, prioridade e categoria. A API e a entrega da interface têm testes automatizados.
 
 ## Objetivo
 
@@ -12,7 +12,7 @@ Construir, de forma gradual, uma agenda pessoal com tarefas (duração, priorida
 
 ## O que já funciona
 
-Cada tarefa tem `id`, `titulo`, `descricao` (opcional) e `concluida`. A API oferece:
+Cada tarefa tem `id`, `titulo`, `descricao`, `concluida` e, opcionalmente, `dia`, `hora`, `duracao_min`, `prioridade` (`alta`, `media` ou `baixa`) e `categoria`. A API oferece:
 
 | Operação      | Rota                   | Sucesso                                         | Erros                                                   |
 | ------------- | ---------------------- | ----------------------------------------------- | ------------------------------------------------------- |
@@ -29,6 +29,9 @@ Regras:
 - O `PATCH` é parcial: só os campos enviados mudam. O `id` não pode ser alterado.
 - Os dados continuam salvos depois de reiniciar o servidor.
 - A documentação interativa é gerada automaticamente em `/docs`.
+- A hora precisa de um dia, e a duração (de 1 a 1440 minutos) precisa de uma hora de início.
+- A categoria tem até 30 caracteres, e uma categoria vazia é o mesmo que nenhuma.
+- Ao ligar o servidor, o banco existente recebe as colunas novas sozinho (migração simples), sem perder tarefas.
 
 ## Interface web
 
@@ -39,6 +42,8 @@ Com o servidor rodando, abra http://127.0.0.1:8000/app/ no navegador. O painel p
 - criar, editar, marcar como concluída (ou reabrir) e excluir tarefas;
 - consultar o calendário do mês e alternar entre os temas escuro e claro;
 - usar a tela em celulares e janelas menores.
+- cadastrar dia, hora, duração, prioridade e categoria; clicar em um dia do calendário mostra só as tarefas dele (tarefas sem dia aparecem na visão geral);
+- ver quantas tarefas há nesta semana (domingo a sábado), a divisão por categoria e o resumo do dia.
 
 Campos que a API ainda não tem (categoria, prioridade, data e hora) aparecem como espaços tracejados e entram em capítulos futuros. Por isso a lista mostra todas as tarefas em qualquer dia. A interface usa HTML, CSS e JavaScript puros, na pasta `frontend/`, entregue pelo próprio FastAPI.
 
@@ -122,7 +127,7 @@ Eles **nunca usam o banco real**: a cada teste, o banco é trocado por um arquiv
 
 ## Próximas etapas (planejadas)
 
-Data e hora nas tarefas (para ligar o calendário, o resumo do dia e o indicador "Nesta semana"); categorias, prioridades e durações; histórico de alterações; relatórios; lembretes. Nada disso está implementado ainda.
+Recorrência de tarefas, histórico de alterações, relatórios, lembretes e notificações. Nada disso está implementado ainda.
 
 ## Autor
 

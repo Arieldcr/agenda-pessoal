@@ -110,3 +110,5 @@ def test_migracao_acrescenta_colunas_sem_perder_dados(tmp_path, monkeypatch):
     assert tarefas[0].titulo == "Antiga"
     assert tarefas[0].concluida is True
     assert tarefas[0].dia is None and tarefas[0].hora is None
+    assert tarefas[0].duracao_min is None
+    assert tarefas[0].prioridade is None and tarefas[0].categoria is None

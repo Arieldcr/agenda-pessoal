@@ -29,10 +29,31 @@ class Tarefa(SQLModel, table=True):
     concluida: bool = False
     dia: date | None = None
     hora: time | None = None
+    duracao_min: int | None = None
+    prioridade: str | None = None
+    categoria: str | None = None
 
 
 # Campos que o usuário pode alterar. O id nunca entra aqui.
-CAMPOS_EDITAVEIS = {"titulo", "descricao", "concluida", "dia", "hora"}
+CAMPOS_EDITAVEIS = {
+    "titulo",
+    "descricao",
+    "concluida",
+    "dia",
+    "hora",
+    "duracao_min",
+    "prioridade",
+    "categoria",
+}
+
+# Colunas acrescentadas depois da primeira versão da tabela.
+COLUNAS_NOVAS = {
+    "dia": "DATE",
+    "hora": "TIME",
+    "duracao_min": "INTEGER",
+    "prioridade": "VARCHAR",
+    "categoria": "VARCHAR",
+}
 
 
 def criar_tabelas() -> None:
@@ -45,10 +66,9 @@ def _adicionar_colunas_novas() -> None:
     """Migração simples: o create_all não altera tabelas que já existem."""
     with engine.begin() as conexao:
         colunas = {linha[1] for linha in conexao.exec_driver_sql("PRAGMA table_info(tarefa)")}
-        if "dia" not in colunas:
-            conexao.exec_driver_sql("ALTER TABLE tarefa ADD COLUMN dia DATE")
-        if "hora" not in colunas:
-            conexao.exec_driver_sql("ALTER TABLE tarefa ADD COLUMN hora TIME")
+        for nome, tipo in COLUNAS_NOVAS.items():
+            if nome not in colunas:
+                conexao.exec_driver_sql(f"ALTER TABLE tarefa ADD COLUMN {nome} {tipo}")
 
 
 def cadastrar_tarefa(
@@ -56,9 +76,20 @@ def cadastrar_tarefa(
     descricao: str | None = None,
     dia: date | None = None,
     hora: time | None = None,
+    duracao_min: int | None = None,
+    prioridade: str | None = None,
+    categoria: str | None = None,
 ) -> Tarefa:
     """Grava uma tarefa nova e a devolve já com o id gerado pelo banco."""
-    tarefa = Tarefa(titulo=titulo, descricao=descricao, dia=dia, hora=hora)
+    tarefa = Tarefa(
+        titulo=titulo,
+        descricao=descricao,
+        dia=dia,
+        hora=hora,
+        duracao_min=duracao_min,
+        prioridade=prioridade,
+        categoria=categoria,
+    )
     with Session(engine) as sessao:
         sessao.add(tarefa)
         sessao.commit()
@@ -88,9 +119,11 @@ def atualizar_tarefa(tarefa_id: int, campos: dict) -> Tarefa | None:
             if nome not in CAMPOS_EDITAVEIS:
                 raise ValueError(f"Campo não editável: {nome}")
             setattr(tarefa, nome, valor)
+        # Se alguma regra for quebrada, sai sem commit: nada é gravado.
         if tarefa.hora is not None and tarefa.dia is None:
-            # Sai sem commit: nada do que foi alterado acima é gravado.
             raise ValueError("A hora precisa de um dia: informe o dia junto com a hora.")
+        if tarefa.duracao_min is not None and tarefa.hora is None:
+            raise ValueError("A duração precisa de uma hora de início.")
         sessao.commit()
         sessao.refresh(tarefa)
         return tarefa

@@ -53,7 +53,7 @@ def test_cadastro_sem_corpo_devolve_422(client):
         {"concluida": None},
         {"concluida": "talvez"},
         {"id": 5},
-        {"prioridade": "alta"},
+        {"campo_inexistente": "valor"},
     ],
     ids=[
         "titulo-vazio",
@@ -98,4 +98,3 @@ def test_atualizacao_com_corpo_vazio_nao_altera_nada(client):
 
     assert resposta.status_code == 200
     assert resposta.json() == criada
-    

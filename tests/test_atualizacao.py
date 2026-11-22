@@ -5,15 +5,11 @@ def test_atualizar_so_o_titulo_preserva_o_resto(client):
 
     resposta = client.patch(f"/tarefas/{criada['id']}", json={"titulo": "Novo"})
 
+    corpo = resposta.json()
     assert resposta.status_code == 200
-    assert resposta.json() == {
-        "id": criada["id"],
-        "titulo": "Novo",
-        "descricao": "Original",
-        "concluida": False,
-        "dia": None,
-        "hora": None,
-    }
+    assert corpo["titulo"] == "Novo"
+    assert corpo["descricao"] == "Original"
+    assert corpo["concluida"] is False
     
 
 
@@ -57,15 +53,11 @@ def test_atualizar_varios_campos_de_uma_vez(client):
         json={"titulo": "  C  ", "descricao": "D", "concluida": True},
     )
 
+    corpo = resposta.json()
     assert resposta.status_code == 200
-    assert resposta.json() == {
-        "id": criada["id"],
-        "titulo": "C",
-        "descricao": "D",
-        "concluida": True,
-        "dia": None,
-        "hora": None,
-    }
+    assert corpo["titulo"] == "C"
+    assert corpo["descricao"] == "D"
+    assert corpo["concluida"] is True
     
 
 

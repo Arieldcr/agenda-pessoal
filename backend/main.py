@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import date, time
 from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +19,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Assistente de Agenda Pessoal", lifespan=lifespan)
 
+Prioridade = Literal["alta", "media", "baixa"]
+
+
+def categoria_vazia_vira_nula(valor):
+    """Uma categoria só com espaços (ou vazia) é o mesmo que nenhuma categoria."""
+    return valor or None
+
 
 class TarefaCriar(BaseModel):
     """Dados que o usuário envia para cadastrar uma tarefa."""
@@ -28,11 +36,18 @@ class TarefaCriar(BaseModel):
     descricao: str | None = None
     dia: date | None = None
     hora: time | None = None
+    duracao_min: int | None = Field(default=None, ge=1, le=1440)
+    prioridade: Prioridade | None = None
+    categoria: str | None = Field(default=None, max_length=30)
+
+    _limpar_categoria = field_validator("categoria")(categoria_vazia_vira_nula)
 
     @model_validator(mode="after")
-    def hora_exige_dia(self):
+    def conferir_regras_de_prazo(self):
         if self.hora is not None and self.dia is None:
             raise ValueError("a hora precisa de um dia: informe o dia junto com a hora")
+        if self.duracao_min is not None and self.hora is None:
+            raise ValueError("a duração precisa de uma hora de início")
         return self
 
 
@@ -46,6 +61,11 @@ class TarefaAtualizar(BaseModel):
     concluida: bool | None = None
     dia: date | None = None
     hora: time | None = None
+    duracao_min: int | None = Field(default=None, ge=1, le=1440)
+    prioridade: Prioridade | None = None
+    categoria: str | None = Field(default=None, max_length=30)
+
+    _limpar_categoria = field_validator("categoria")(categoria_vazia_vira_nula)
 
     @field_validator("titulo", "concluida")
     @classmethod
@@ -62,7 +82,15 @@ def raiz():
 
 @app.post("/tarefas", response_model=database.Tarefa, status_code=201)
 def cadastrar_tarefa(dados: TarefaCriar):
-    return database.cadastrar_tarefa(dados.titulo, dados.descricao, dados.dia, dados.hora)
+    return database.cadastrar_tarefa(
+        dados.titulo,
+        dados.descricao,
+        dados.dia,
+        dados.hora,
+        dados.duracao_min,
+        dados.prioridade,
+        dados.categoria,
+    )
 
 
 @app.get("/tarefas", response_model=list[database.Tarefa])

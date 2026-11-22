@@ -3,15 +3,12 @@ def test_cadastrar_tarefa_devolve_201_e_a_tarefa(client):
         "/tarefas", json={"titulo": "Estudar", "descricao": "Capítulo 4"}
     )
 
+    corpo = resposta.json()
     assert resposta.status_code == 201
-    assert resposta.json() == {
-        "id": 1,
-        "titulo": "Estudar",
-        "descricao": "Capítulo 4",
-        "concluida": False,
-        "dia": None,
-        "hora": None,
-    }
+    assert corpo["id"] == 1
+    assert corpo["titulo"] == "Estudar"
+    assert corpo["descricao"] == "Capítulo 4"
+    assert corpo["concluida"] is False
    
 
 

@@ -1,7 +1,45 @@
 // ===== Configuração =====
 const NOME_USUARIO = "Ariel";
+const PALETA = [
+  "#2563ff",
+  "#16c79a",
+  "#8b5cf6",
+  "#f5b324",
+  "#38bdf8",
+  "#ef4444",
+];
+const ROTULOS_DE_CAMPO = {
+  titulo: "Título",
+  descricao: "Descrição",
+  dia: "Dia",
+  hora: "Hora",
+  duracao_min: "Duração",
+  prioridade: "Prioridade",
+  categoria: "Categoria",
+};
+const ROTULOS_DE_PRIORIDADE = { alta: "Alta", media: "Média", baixa: "Baixa" };
 
 // ===== Comunicação com a API: tudo passa por este objeto =====
+async function mensagemDeErro(resposta, padrao) {
+  if (resposta.status !== 422) {
+    return padrao;
+  }
+  try {
+    const corpo = await resposta.json();
+    if (typeof corpo.detail === "string") {
+      return corpo.detail;
+    }
+    const item = corpo.detail[0];
+    const campo = item.loc[item.loc.length - 1];
+    if (ROTULOS_DE_CAMPO[campo]) {
+      return `Confira o campo ${ROTULOS_DE_CAMPO[campo]}.`;
+    }
+    return item.msg.replace("Value error, ", "");
+  } catch (erro) {
+    return padrao;
+  }
+}
+
 const data = {
   async listar() {
     const resposta = await fetch("/tarefas");
@@ -11,17 +49,15 @@ const data = {
     return resposta.json();
   },
 
-  async criar(titulo, descricao) {
+  async criar(campos) {
     const resposta = await fetch("/tarefas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ titulo, descricao: descricao || null }),
+      body: JSON.stringify(campos),
     });
     if (!resposta.ok) {
       throw new Error(
-        resposta.status === 422
-          ? "Título inválido: use de 1 a 100 caracteres."
-          : "Não foi possível cadastrar a tarefa.",
+        await mensagemDeErro(resposta, "Não foi possível cadastrar a tarefa."),
       );
     }
     return resposta.json();
@@ -35,9 +71,7 @@ const data = {
     });
     if (!resposta.ok) {
       throw new Error(
-        resposta.status === 422
-          ? "Título inválido: use de 1 a 100 caracteres."
-          : "Não foi possível atualizar a tarefa.",
+        await mensagemDeErro(resposta, "Não foi possível atualizar a tarefa."),
       );
     }
     return resposta.json();
@@ -56,7 +90,60 @@ let tarefasCarregadas = [];
 let filtroAtual = "todas";
 let termoBusca = "";
 let tarefaEmEdicao = null;
+let diaSelecionado = null;
 let mesExibido = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+// ===== Utilitários =====
+function criarElemento(tag, classe, texto) {
+  const elemento = document.createElement(tag);
+  if (classe) {
+    elemento.className = classe;
+  }
+  if (texto !== undefined) {
+    elemento.textContent = texto;
+  }
+  return elemento;
+}
+
+function normalizar(texto) {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function doisDigitos(numero) {
+  return String(numero).padStart(2, "0");
+}
+
+function chaveDoDia(dia) {
+  return `${dia.getFullYear()}-${doisDigitos(dia.getMonth() + 1)}-${doisDigitos(dia.getDate())}`;
+}
+
+function paraData(chave) {
+  const [ano, mes, dia] = chave.split("-").map(Number);
+  return new Date(ano, mes - 1, dia);
+}
+
+function rotuloDoDia(chave) {
+  const agora = new Date();
+  const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  const dia = paraData(chave);
+  const diferenca = Math.round((dia - hoje) / 86400000);
+  if (diferenca === 0) return "Hoje";
+  if (diferenca === 1) return "Amanhã";
+  if (diferenca === -1) return "Ontem";
+  return `${DIAS[dia.getDay()]}, ${doisDigitos(dia.getDate())}/${doisDigitos(dia.getMonth() + 1)}`;
+}
+
+function formatarDuracao(minutos) {
+  if (minutos < 60) {
+    return `${minutos} min`;
+  }
+  const horas = Math.floor(minutos / 60);
+  const resto = minutos % 60;
+  return resto ? `${horas}h${doisDigitos(resto)}` : `${horas}h`;
+}
 
 // ===== Tema claro e escuro =====
 const CHAVE_TEMA = "kaizen-tema";
@@ -145,10 +232,34 @@ function configurarAtalhoDeBusca() {
 }
 
 // ===== Indicadores e progresso: sempre calculados a partir da lista =====
+function tarefasDaSemana(tarefas) {
+  const hoje = new Date();
+  const domingo = new Date(
+    hoje.getFullYear(),
+    hoje.getMonth(),
+    hoje.getDate() - hoje.getDay(),
+  );
+  const sabado = new Date(
+    domingo.getFullYear(),
+    domingo.getMonth(),
+    domingo.getDate() + 6,
+  );
+  const de = chaveDoDia(domingo);
+  const ate = chaveDoDia(sabado);
+  return tarefas.filter(
+    (tarefa) => tarefa.dia && tarefa.dia >= de && tarefa.dia <= ate,
+  ).length;
+}
+
 function calcularIndicadores(tarefas) {
   const total = tarefas.length;
   const concluidas = tarefas.filter((tarefa) => tarefa.concluida).length;
-  return { total, concluidas, pendentes: total - concluidas };
+  return {
+    total,
+    concluidas,
+    pendentes: total - concluidas,
+    semana: tarefasDaSemana(tarefas),
+  };
 }
 
 function mostrarIndicadores(indicadores) {
@@ -156,6 +267,7 @@ function mostrarIndicadores(indicadores) {
   document.getElementById("kpi-concluidas").textContent =
     indicadores.concluidas;
   document.getElementById("kpi-pendentes").textContent = indicadores.pendentes;
+  document.getElementById("kpi-semana").textContent = indicadores.semana;
 }
 
 function mostrarContadores() {
@@ -177,12 +289,111 @@ function mostrarProgresso() {
     `${concluidas} de ${total} concluídas`;
 }
 
+// ===== Painel Sobre seus assuntos: categorias e resumo do dia =====
+function mostrarAssuntos() {
+  const alvo = document.getElementById("assuntos");
+  const contagem = new Map();
+  tarefasCarregadas.forEach((tarefa) => {
+    if (!tarefa.categoria) {
+      return;
+    }
+    const chave = normalizar(tarefa.categoria);
+    const grupo = contagem.get(chave) || { nome: tarefa.categoria, total: 0 };
+    grupo.total += 1;
+    contagem.set(chave, grupo);
+  });
+  const grupos = [...contagem.values()].sort(
+    (a, b) => b.total - a.total || a.nome.localeCompare(b.nome),
+  );
+
+  if (grupos.length === 0) {
+    alvo.replaceChildren(
+      criarElemento(
+        "p",
+        "vazio-nota",
+        "Por assunto: aparece quando você der uma categoria às tarefas.",
+      ),
+    );
+    return;
+  }
+
+  const soma = grupos.reduce((acumulado, grupo) => acumulado + grupo.total, 0);
+  let inicio = 0;
+  const fatias = [];
+  const itens = grupos.map((grupo, indice) => {
+    const cor = PALETA[indice % PALETA.length];
+    const fim = inicio + (grupo.total / soma) * 100;
+    fatias.push(`${cor} ${inicio}% ${fim}%`);
+    inicio = fim;
+    const item = criarElemento("li");
+    const ponto = criarElemento("i");
+    ponto.style.background = cor;
+    item.append(
+      ponto,
+      criarElemento("span", "", `${grupo.nome}: ${grupo.total}`),
+    );
+    return item;
+  });
+
+  const rosca = criarElemento("div", "rosca");
+  rosca.style.background = `conic-gradient(${fatias.join(", ")})`;
+  rosca.append(criarElemento("span", "", String(soma)));
+  const legenda = criarElemento("ul", "legenda-assuntos");
+  legenda.append(...itens);
+  alvo.replaceChildren(rosca, legenda);
+}
+
+function mostrarResumoDoDia() {
+  const alvo = document.getElementById("resumo-dia");
+  const chave = diaSelecionado || chaveDoDia(new Date());
+  const doDia = tarefasCarregadas.filter((tarefa) => tarefa.dia === chave);
+  const titulo = criarElemento(
+    "strong",
+    "",
+    `Resumo do dia: ${rotuloDoDia(chave)}`,
+  );
+
+  if (doDia.length === 0) {
+    alvo.replaceChildren(
+      titulo,
+      criarElemento("span", "", "Nenhuma tarefa neste dia."),
+    );
+    return;
+  }
+
+  const concluidas = doDia.filter((tarefa) => tarefa.concluida).length;
+  const minutos = doDia.reduce(
+    (soma, tarefa) => soma + (tarefa.duracao_min || 0),
+    0,
+  );
+  const barra = criarElemento("div", "barra");
+  const preenchimento = criarElemento("i");
+  preenchimento.style.width = `${Math.round((concluidas / doDia.length) * 100)}%`;
+  barra.appendChild(preenchimento);
+  let texto = `${concluidas} de ${doDia.length} concluídas`;
+  if (minutos > 0) {
+    texto += ` · ${formatarDuracao(minutos)} planejadas`;
+  }
+  alvo.replaceChildren(titulo, barra, criarElemento("span", "", texto));
+}
+
 // ===== Avisos da lista: carregando, erro e vazio =====
 function mostrarAviso(texto, erro = false) {
   const aviso = document.getElementById("estado");
   aviso.textContent = texto;
   aviso.classList.toggle("erro", erro);
   aviso.hidden = texto === "";
+}
+
+function atualizarTela() {
+  mostrarIndicadores(calcularIndicadores(tarefasCarregadas));
+  mostrarContadores();
+  mostrarProgresso();
+  mostrarAssuntos();
+  mostrarResumoDoDia();
+  mostrarSugestoesDeCategoria();
+  mostrarCalendario();
+  mostrarLista();
 }
 
 async function carregarTarefas() {
@@ -199,10 +410,7 @@ async function carregarTarefas() {
     botao.hidden = false;
     return;
   }
-  mostrarIndicadores(calcularIndicadores(tarefasCarregadas));
-  mostrarContadores();
-  mostrarProgresso();
-  mostrarLista();
+  atualizarTela();
 }
 
 // ===== Lista de tarefas =====
@@ -213,11 +421,13 @@ const ICONE_EDITAR =
 const ICONE_EXCLUIR =
   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h10M6 4V2h4v2M5 4l.5 9h5L11 4"/></svg>';
 
-function normalizar(texto) {
-  return texto
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+function compararTarefas(a, b) {
+  return (
+    Number(a.concluida) - Number(b.concluida) ||
+    (a.dia || "9999-99-99").localeCompare(b.dia || "9999-99-99") ||
+    (a.hora || "99:99").localeCompare(b.hora || "99:99") ||
+    a.id - b.id
+  );
 }
 
 async function alternarConclusao(tarefa) {
@@ -258,6 +468,35 @@ function criarBotaoAcao(rotulo, icone, aoClicar, classeExtra = "") {
   return botao;
 }
 
+function criarMeta(tarefa) {
+  const meta = criarElemento("div", "meta");
+  if (tarefa.dia) {
+    let texto = rotuloDoDia(tarefa.dia);
+    if (tarefa.hora) {
+      texto += ` • ${tarefa.hora.slice(0, 5)}`;
+    }
+    if (tarefa.duracao_min) {
+      texto += ` (${formatarDuracao(tarefa.duracao_min)})`;
+    }
+    meta.appendChild(criarElemento("span", "tag-item tag-dia", texto));
+  }
+  if (tarefa.categoria) {
+    meta.appendChild(
+      criarElemento("span", "tag-item tag-categoria", tarefa.categoria),
+    );
+  }
+  if (tarefa.prioridade) {
+    meta.appendChild(
+      criarElemento(
+        "span",
+        `tag-item prioridade-${tarefa.prioridade}`,
+        ROTULOS_DE_PRIORIDADE[tarefa.prioridade] || tarefa.prioridade,
+      ),
+    );
+  }
+  return meta;
+}
+
 function criarItem(tarefa) {
   const item = document.createElement("li");
   item.className = tarefa.concluida ? "item concluida" : "item";
@@ -276,21 +515,17 @@ function criarItem(tarefa) {
   }
   marca.addEventListener("click", () => alternarConclusao(tarefa));
 
-  const corpo = document.createElement("div");
-  corpo.className = "corpo-item";
-  const titulo = document.createElement("strong");
-  titulo.className = "titulo";
-  titulo.textContent = tarefa.titulo;
-  corpo.appendChild(titulo);
+  const corpo = criarElemento("div", "corpo-item");
+  corpo.appendChild(criarElemento("strong", "titulo", tarefa.titulo));
   if (tarefa.descricao) {
-    const descricao = document.createElement("small");
-    descricao.className = "descricao";
-    descricao.textContent = tarefa.descricao;
-    corpo.appendChild(descricao);
+    corpo.appendChild(criarElemento("small", "descricao", tarefa.descricao));
+  }
+  const meta = criarMeta(tarefa);
+  if (meta.children.length > 0) {
+    corpo.appendChild(meta);
   }
 
-  const acoes = document.createElement("div");
-  acoes.className = "acoes-item";
+  const acoes = criarElemento("div", "acoes-item");
   acoes.append(
     criarBotaoAcao(`Editar: ${tarefa.titulo}`, ICONE_EDITAR, () =>
       abrirDialogo(tarefa),
@@ -312,20 +547,23 @@ function mostrarLista() {
   const visiveis = tarefasCarregadas.filter((tarefa) => {
     if (filtroAtual === "pendentes" && tarefa.concluida) return false;
     if (filtroAtual === "concluidas" && !tarefa.concluida) return false;
+    if (diaSelecionado && tarefa.dia !== diaSelecionado) return false;
     if (!termo) return true;
-    return normalizar(`${tarefa.titulo} ${tarefa.descricao || ""}`).includes(
-      termo,
-    );
+    return normalizar(
+      `${tarefa.titulo} ${tarefa.descricao || ""} ${tarefa.categoria || ""}`,
+    ).includes(termo);
   });
-  const ordenadas = [...visiveis].sort(
-    (a, b) => Number(a.concluida) - Number(b.concluida) || a.id - b.id,
-  );
+  const ordenadas = [...visiveis].sort(compararTarefas);
   document.getElementById("lista").replaceChildren(...ordenadas.map(criarItem));
 
   if (tarefasCarregadas.length === 0) {
     mostrarAviso("Nenhuma tarefa cadastrada ainda.");
   } else if (ordenadas.length === 0) {
-    mostrarAviso("Nenhuma tarefa encontrada com esse filtro ou busca.");
+    mostrarAviso(
+      diaSelecionado && !termo && filtroAtual === "todas"
+        ? "Nenhuma tarefa neste dia."
+        : "Nenhuma tarefa encontrada com esse filtro, dia ou busca.",
+    );
   } else {
     mostrarAviso("");
   }
@@ -347,6 +585,21 @@ function configurarFiltros() {
 }
 
 // ===== Janela de nova tarefa e de edição =====
+function mostrarSugestoesDeCategoria() {
+  const vistas = new Map();
+  tarefasCarregadas.forEach((tarefa) => {
+    if (tarefa.categoria && !vistas.has(normalizar(tarefa.categoria))) {
+      vistas.set(normalizar(tarefa.categoria), tarefa.categoria);
+    }
+  });
+  const opcoes = [...vistas.values()].sort().map((nome) => {
+    const opcao = document.createElement("option");
+    opcao.value = nome;
+    return opcao;
+  });
+  document.getElementById("categorias").replaceChildren(...opcoes);
+}
+
 function abrirDialogo(tarefa = null) {
   tarefaEmEdicao = tarefa;
   document.getElementById("form-tarefa").reset();
@@ -354,12 +607,44 @@ function abrirDialogo(tarefa = null) {
   document.getElementById("titulo-dialogo").textContent = tarefa
     ? "Editar tarefa"
     : "Nova tarefa";
-  if (tarefa) {
-    document.getElementById("campo-titulo").value = tarefa.titulo;
-    document.getElementById("campo-descricao").value = tarefa.descricao || "";
-  }
+
+  const preencher = (id, valor) => {
+    document.getElementById(id).value = valor ?? "";
+  };
+  preencher("campo-titulo", tarefa ? tarefa.titulo : "");
+  preencher("campo-descricao", tarefa ? tarefa.descricao : "");
+  preencher("campo-dia", tarefa ? tarefa.dia : diaSelecionado);
+  preencher("campo-hora", tarefa && tarefa.hora ? tarefa.hora.slice(0, 5) : "");
+  preencher("campo-duracao", tarefa ? tarefa.duracao_min : "");
+  preencher("campo-prioridade", tarefa ? tarefa.prioridade : "");
+  preencher("campo-categoria", tarefa ? tarefa.categoria : "");
+
   document.getElementById("dialogo-tarefa").showModal();
   document.getElementById("campo-titulo").focus();
+}
+
+function lerFormulario() {
+  const texto = (id) => document.getElementById(id).value.trim();
+  const duracao = texto("campo-duracao");
+  return {
+    titulo: document.getElementById("campo-titulo").value,
+    descricao: texto("campo-descricao") || null,
+    dia: texto("campo-dia") || null,
+    hora: texto("campo-hora") || null,
+    duracao_min: duracao ? Number(duracao) : null,
+    prioridade: texto("campo-prioridade") || null,
+    categoria: texto("campo-categoria") || null,
+  };
+}
+
+function validarFormulario(campos) {
+  if (campos.hora && !campos.dia) {
+    return "Informe o dia junto com a hora.";
+  }
+  if (campos.duracao_min && !campos.hora) {
+    return "Informe a hora de início para usar a duração.";
+  }
+  return "";
 }
 
 function configurarDialogoDeTarefa() {
@@ -377,16 +662,18 @@ function configurarDialogoDeTarefa() {
     .getElementById("form-tarefa")
     .addEventListener("submit", async (evento) => {
       evento.preventDefault();
-      const titulo = document.getElementById("campo-titulo").value;
-      const descricao = document.getElementById("campo-descricao").value;
+      const campos = lerFormulario();
+      const problema = validarFormulario(campos);
+      if (problema) {
+        erro.textContent = problema;
+        erro.hidden = false;
+        return;
+      }
       try {
         if (tarefaEmEdicao) {
-          await data.atualizar(tarefaEmEdicao.id, {
-            titulo,
-            descricao: descricao.trim() === "" ? null : descricao,
-          });
+          await data.atualizar(tarefaEmEdicao.id, campos);
         } else {
-          await data.criar(titulo, descricao);
+          await data.criar(campos);
         }
       } catch (falha) {
         erro.textContent = falha.message;
@@ -415,28 +702,55 @@ const MESES_COMPLETOS = [
 ];
 const INICIAIS_DIAS = ["D", "S", "T", "Q", "Q", "S", "S"];
 
+function atualizarChipDoDia() {
+  const botao = document.getElementById("limpar-dia");
+  botao.hidden = !diaSelecionado;
+  if (diaSelecionado) {
+    botao.textContent = `${rotuloDoDia(diaSelecionado)} ✕`;
+  }
+}
+
+function selecionarDia(chave) {
+  diaSelecionado = diaSelecionado === chave ? null : chave;
+  atualizarChipDoDia();
+  mostrarCalendario();
+  mostrarResumoDoDia();
+  mostrarLista();
+}
+
 function mostrarCalendario() {
   const ano = mesExibido.getFullYear();
   const mes = mesExibido.getMonth();
   document.getElementById("titulo-mes").textContent =
     `${MESES_COMPLETOS[mes]} de ${ano}`;
 
-  const celulas = INICIAIS_DIAS.map((letra) => {
-    const cabecalho = document.createElement("span");
-    cabecalho.className = "dia-semana";
-    cabecalho.textContent = letra;
-    return cabecalho;
+  const contagemPorDia = {};
+  tarefasCarregadas.forEach((tarefa) => {
+    if (tarefa.dia) {
+      contagemPorDia[tarefa.dia] = (contagemPorDia[tarefa.dia] || 0) + 1;
+    }
   });
 
-  const hoje = new Date().toDateString();
+  const celulas = INICIAIS_DIAS.map((letra) =>
+    criarElemento("span", "dia-semana", letra),
+  );
+  const hoje = chaveDoDia(new Date());
   const deslocamento = new Date(ano, mes, 1).getDay();
   for (let i = 0; i < 42; i++) {
     const dia = new Date(ano, mes, 1 - deslocamento + i);
-    const celula = document.createElement("span");
-    celula.className = "dia";
+    const chave = chaveDoDia(dia);
+    const celula = criarElemento("button", "dia", String(dia.getDate()));
+    celula.type = "button";
+    celula.setAttribute(
+      "aria-label",
+      `${dia.getDate()} de ${MESES_COMPLETOS[dia.getMonth()]}`,
+    );
+    celula.setAttribute("aria-pressed", String(chave === diaSelecionado));
     if (dia.getMonth() !== mes) celula.classList.add("fora");
-    if (dia.toDateString() === hoje) celula.classList.add("hoje");
-    celula.textContent = dia.getDate();
+    if (chave === hoje) celula.classList.add("hoje");
+    if (contagemPorDia[chave]) celula.classList.add("com-tarefas");
+    if (chave === diaSelecionado) celula.classList.add("selecionado");
+    celula.addEventListener("click", () => selecionarDia(chave));
     celulas.push(celula);
   }
   document.getElementById("grade").replaceChildren(...celulas);
@@ -469,6 +783,9 @@ async function iniciar() {
   document
     .getElementById("mes-seguinte")
     .addEventListener("click", () => mudarMes(1));
+  document.getElementById("limpar-dia").addEventListener("click", () => {
+    selecionarDia(diaSelecionado);
+  });
 
   document.getElementById("busca").addEventListener("input", (evento) => {
     termoBusca = evento.target.value;

@@ -1118,3 +1118,219 @@ body::before {
 :root[data-tema="claro"] .acao-item.perigo:hover {
   color: #b42318;
 }
+
+/* ===== Dados das tarefas ===== */
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.tag-item {
+  padding: 2px 9px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.tag-dia {
+  border-color: rgba(56, 189, 248, 0.45);
+  color: var(--sky);
+}
+
+.tag-categoria {
+  border-color: rgba(139, 92, 246, 0.5);
+  color: #b79bff;
+}
+
+.prioridade-alta {
+  border-color: rgba(239, 68, 68, 0.55);
+  color: #ff9b9b;
+}
+
+.prioridade-media {
+  border-color: rgba(245, 179, 36, 0.55);
+  color: var(--amber);
+}
+
+.prioridade-baixa {
+  border-color: rgba(56, 189, 248, 0.5);
+  color: var(--sky);
+}
+
+:root[data-tema="claro"] .tag-dia,
+:root[data-tema="claro"] .prioridade-baixa {
+  color: #0369a1;
+}
+
+:root[data-tema="claro"] .tag-categoria {
+  color: #6d28d9;
+}
+
+:root[data-tema="claro"] .prioridade-alta {
+  color: #b42318;
+}
+
+:root[data-tema="claro"] .prioridade-media {
+  color: #92400e;
+}
+
+/* ===== Calendário clicável ===== */
+button.dia {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.dia:hover {
+  background: rgba(120, 160, 255, 0.14);
+}
+
+.dia.com-tarefas::after {
+  content: "";
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.dia.hoje.com-tarefas::after {
+  background: #fff;
+}
+
+.dia.selecionado {
+  outline: 2px solid var(--sky);
+  outline-offset: -2px;
+}
+
+/* ===== Painel por assunto e resumo do dia ===== */
+.assuntos {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.rosca {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+}
+
+.rosca span {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--bg2);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.legenda-assuntos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.legenda-assuntos li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+
+.legenda-assuntos i {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.resumo-dia {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.resumo-dia strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.barra {
+  height: 8px;
+  margin: 6px 0;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(120, 160, 255, 0.18);
+}
+
+.barra i {
+  display: block;
+  height: 100%;
+  background: var(--green);
+}
+
+.vazio-nota {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ===== Diálogo com mais campos ===== */
+.dialogo {
+  width: min(520px, calc(100% - 32px));
+}
+
+.linha-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.dialogo select {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(120, 160, 255, 0.08);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.dialogo select option {
+  background: var(--bg2);
+  color: var(--text);
+}

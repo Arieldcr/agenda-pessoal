@@ -113,12 +113,12 @@
         </div>
         <i class="tendencia" aria-hidden="true" title="Tendência: aparece quando houver histórico"></i>
       </section>
-      <section class="vidro bloco indicador tracejado" aria-labelledby="t-semana">
-        <span class="icone-kpi tracejado"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <section class="vidro bloco indicador" aria-labelledby="t-semana">
+        <span class="icone-kpi"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M3 5h14v12H3zM3 9h14M7 3v4M13 3v4" />
           </svg></span>
         <div class="texto">
-          <h2 id="t-semana">Nesta semana</h2><strong class="numero sem-dado">—</strong><small class="nota">Precisa de datas nas tarefas</small>
+          <h2 id="t-semana">Nesta semana</h2><strong class="numero" id="kpi-semana">—</strong><small class="nota">Dom a sáb, com dia definido</small>
         </div>
       </section>
 
@@ -131,6 +131,7 @@
               <button type="button" class="filtro" data-filtro="pendentes" aria-pressed="false">Pendentes <span id="cont-pendentes">0</span></button>
               <button type="button" class="filtro" data-filtro="concluidas" aria-pressed="false">Concluídas <span id="cont-concluidas">0</span></button>
             </div>
+            <button type="button" id="limpar-dia" class="botao-pequeno" hidden></button>
             <button type="button" id="nova-tarefa" class="botao">+ Nova tarefa</button>
           </div>
           <p id="estado" class="aviso">Carregando tarefas...</p>
@@ -153,7 +154,8 @@
               <strong id="anel-texto">0 de 0 concluídas</strong>
             </div>
           </div>
-          <p class="reservado">Por assunto e resumo do dia: aparecem quando as tarefas tiverem categoria, data e hora.</p>
+          <div id="assuntos" class="assuntos"></div>
+          <div id="resumo-dia" class="resumo-dia"></div>
         </section>
         <section class="vidro bloco" aria-labelledby="t-calendario">
           <div class="cabeca-calendario">
@@ -167,10 +169,9 @@
           <div class="grade-calendario" id="grade"></div>
         </section>
       </div>
-
-
     </main>
   </div>
+
   <dialog id="dialogo-tarefa" class="dialogo" aria-labelledby="titulo-dialogo">
     <form id="form-tarefa">
       <h2 id="titulo-dialogo">Nova tarefa</h2>
@@ -178,8 +179,33 @@
         <input id="campo-titulo" type="text" maxlength="100" required autocomplete="off">
       </label>
       <label>Descrição (opcional)
-        <textarea id="campo-descricao" rows="3"></textarea>
+        <textarea id="campo-descricao" rows="2"></textarea>
       </label>
+      <div class="linha-campos">
+        <label>Dia
+          <input id="campo-dia" type="date">
+        </label>
+        <label>Hora
+          <input id="campo-hora" type="time">
+        </label>
+        <label>Duração (min)
+          <input id="campo-duracao" type="number" min="1" max="1440" step="1">
+        </label>
+      </div>
+      <div class="linha-campos">
+        <label>Prioridade
+          <select id="campo-prioridade">
+            <option value="">Sem prioridade</option>
+            <option value="alta">Alta</option>
+            <option value="media">Média</option>
+            <option value="baixa">Baixa</option>
+          </select>
+        </label>
+        <label>Categoria
+          <input id="campo-categoria" type="text" maxlength="30" list="categorias" autocomplete="off">
+        </label>
+      </div>
+      <datalist id="categorias"></datalist>
       <p id="erro-form" class="erro" hidden></p>
       <div class="acoes">
         <button type="button" id="cancelar-tarefa" class="botao-pequeno">Cancelar</button>

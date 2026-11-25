@@ -175,6 +175,7 @@
   <dialog id="dialogo-tarefa" class="dialogo" aria-labelledby="titulo-dialogo">
     <form id="form-tarefa">
       <h2 id="titulo-dialogo">Nova tarefa</h2>
+      <p id="dica-ocorrencia" class="dica" hidden>Campos esvaziados voltam ao padrão da repetição.</p>
       <label>Título
         <input id="campo-titulo" type="text" maxlength="100" required autocomplete="off">
       </label>
@@ -182,7 +183,7 @@
         <textarea id="campo-descricao" rows="2"></textarea>
       </label>
       <div class="linha-campos">
-        <label>Dia
+        <label><span id="rotulo-dia">Dia</span>
           <input id="campo-dia" type="date">
         </label>
         <label>Hora
@@ -206,12 +207,62 @@
         </label>
       </div>
       <datalist id="categorias"></datalist>
+
+      <div id="bloco-repetir" class="bloco-repetir">
+        <label>Repetir
+          <select id="campo-repete">
+            <option value="">Não repete</option>
+            <option value="diaria">Todos os dias</option>
+            <option value="semanal">Toda semana</option>
+            <option value="mensal">Todo mês</option>
+          </select>
+        </label>
+        <div id="campos-repeticao" hidden>
+          <div class="linha-campos">
+            <label>A cada
+              <span class="com-unidade">
+                <input id="campo-intervalo" type="number" min="1" max="365" step="1" value="1">
+                <span id="unidade-intervalo"></span>
+              </span>
+            </label>
+            <label>Termina em (opcional)
+              <input id="campo-fim" type="date">
+            </label>
+          </div>
+          <div id="bloco-dias-semana" hidden>
+            <span class="rotulo-grupo">Nos dias</span>
+            <div class="chips-dias">
+              <label class="chip-dia" title="Domingo"><input type="checkbox" name="dia-semana" value="0"><span>D</span></label>
+              <label class="chip-dia" title="Segunda"><input type="checkbox" name="dia-semana" value="1"><span>S</span></label>
+              <label class="chip-dia" title="Terça"><input type="checkbox" name="dia-semana" value="2"><span>T</span></label>
+              <label class="chip-dia" title="Quarta"><input type="checkbox" name="dia-semana" value="3"><span>Q</span></label>
+              <label class="chip-dia" title="Quinta"><input type="checkbox" name="dia-semana" value="4"><span>Q</span></label>
+              <label class="chip-dia" title="Sexta"><input type="checkbox" name="dia-semana" value="5"><span>S</span></label>
+              <label class="chip-dia" title="Sábado"><input type="checkbox" name="dia-semana" value="6"><span>S</span></label>
+            </div>
+          </div>
+          <label id="bloco-dia-mes" hidden>Dia do mês
+            <input id="campo-dia-mes" type="number" min="1" max="31" step="1">
+          </label>
+        </div>
+      </div>
+
       <p id="erro-form" class="erro" hidden></p>
       <div class="acoes">
         <button type="button" id="cancelar-tarefa" class="botao-pequeno">Cancelar</button>
         <button type="submit" class="botao">Salvar</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="dialogo-escopo" class="dialogo" aria-labelledby="escopo-titulo">
+    <h2 id="escopo-titulo">Tarefa recorrente</h2>
+    <p id="escopo-texto" class="dica">O que você quer alterar?</p>
+    <div class="acoes-coluna">
+      <button type="button" id="escopo-esta" class="botao">Somente esta</button>
+      <button type="button" id="escopo-todas" class="botao-pequeno">Todas as ocorrências</button>
+      <button type="button" id="escopo-cancelar" class="botao-pequeno">Voltar</button>
+    </div>
   </dialog>
 </body>
 

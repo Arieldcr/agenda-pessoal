@@ -16,6 +16,12 @@ const ROTULOS_DE_CAMPO = {
   duracao_min: "Duração",
   prioridade: "Prioridade",
   categoria: "Categoria",
+  frequencia: "Repetição",
+  intervalo: "Intervalo",
+  dias_semana: "Dias da semana",
+  dia_do_mes: "Dia do mês",
+  inicio: "Início",
+  fim: "Término",
 };
 const ROTULOS_DE_PRIORIDADE = { alta: "Alta", media: "Média", baixa: "Baixa" };
 
@@ -40,41 +46,53 @@ async function mensagemDeErro(resposta, padrao) {
   }
 }
 
+async function enviar(metodo, url, corpo, padrao) {
+  const opcoes = { method: metodo };
+  if (corpo !== undefined) {
+    opcoes.headers = { "Content-Type": "application/json" };
+    opcoes.body = JSON.stringify(corpo);
+  }
+  const resposta = await fetch(url, opcoes);
+  if (!resposta.ok) {
+    throw new Error(await mensagemDeErro(resposta, padrao));
+  }
+  return resposta.status === 204 ? null : resposta.json();
+}
+
 const data = {
-  async listar() {
-    const resposta = await fetch("/tarefas");
-    if (!resposta.ok) {
-      throw new Error("Falha ao listar as tarefas");
-    }
-    return resposta.json();
+  listar() {
+    return enviar("GET", "/tarefas", undefined, "Falha ao listar as tarefas");
   },
 
-  async criar(campos) {
-    const resposta = await fetch("/tarefas", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(campos),
-    });
-    if (!resposta.ok) {
-      throw new Error(
-        await mensagemDeErro(resposta, "Não foi possível cadastrar a tarefa."),
-      );
+  agenda(de, ate, semDia = false) {
+    const consulta = new URLSearchParams({ de, ate });
+    if (semDia) {
+      consulta.set("sem_dia", "true");
     }
-    return resposta.json();
+    return enviar(
+      "GET",
+      `/agenda?${consulta}`,
+      undefined,
+      "Falha ao consultar a agenda",
+    );
   },
 
-  async atualizar(id, campos) {
-    const resposta = await fetch(`/tarefas/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(campos),
-    });
-    if (!resposta.ok) {
-      throw new Error(
-        await mensagemDeErro(resposta, "Não foi possível atualizar a tarefa."),
-      );
-    }
-    return resposta.json();
+  criar(campos) {
+    return enviar(
+      "POST",
+      "/tarefas",
+      campos,
+      "Não foi possível cadastrar a tarefa.",
+    );
+  },
+
+  atualizar(id, campos) {
+    return enviar(
+      "PATCH",
+      `/tarefas/${id}`,
+      campos,
+      "Não foi possível atualizar a tarefa.",
+    );
   },
 
   async excluir(id) {
@@ -83,14 +101,60 @@ const data = {
       throw new Error("Não foi possível excluir a tarefa.");
     }
   },
+
+  buscarRecorrencia(id) {
+    return enviar(
+      "GET",
+      `/recorrencias/${id}`,
+      undefined,
+      "Não foi possível abrir a recorrência.",
+    );
+  },
+
+  criarRecorrencia(campos) {
+    return enviar(
+      "POST",
+      "/recorrencias",
+      campos,
+      "Não foi possível cadastrar a tarefa recorrente.",
+    );
+  },
+
+  atualizarRecorrencia(id, campos) {
+    return enviar(
+      "PATCH",
+      `/recorrencias/${id}`,
+      campos,
+      "Não foi possível atualizar a tarefa recorrente.",
+    );
+  },
+
+  async excluirRecorrencia(id) {
+    const resposta = await fetch(`/recorrencias/${id}`, { method: "DELETE" });
+    if (!resposta.ok && resposta.status !== 404) {
+      throw new Error("Não foi possível excluir a tarefa recorrente.");
+    }
+  },
+
+  salvarOcorrencia(recorrenciaId, dia, campos) {
+    return enviar(
+      "PUT",
+      `/recorrencias/${recorrenciaId}/ocorrencias/${dia}`,
+      campos,
+      "Não foi possível alterar a ocorrência.",
+    );
+  },
 };
 
 // ===== Estado da tela =====
-let tarefasCarregadas = [];
+let tarefasCarregadas = []; // tarefas avulsas: indicadores, progresso e assuntos
+let itensAgenda = []; // agenda da grade do calendário, com as tarefas sem dia
+let itensSemana = []; // agenda da semana atual
 let filtroAtual = "todas";
 let termoBusca = "";
-let tarefaEmEdicao = null;
 let diaSelecionado = null;
+let modoDoDialogo = "nova";
+let itemEmEdicao = null;
 let mesExibido = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
 // ===== Utilitários =====
@@ -231,51 +295,20 @@ function configurarAtalhoDeBusca() {
   });
 }
 
-// ===== Indicadores e progresso: sempre calculados a partir da lista =====
-function tarefasDaSemana(tarefas) {
-  const hoje = new Date();
-  const domingo = new Date(
-    hoje.getFullYear(),
-    hoje.getMonth(),
-    hoje.getDate() - hoje.getDay(),
-  );
-  const sabado = new Date(
-    domingo.getFullYear(),
-    domingo.getMonth(),
-    domingo.getDate() + 6,
-  );
-  const de = chaveDoDia(domingo);
-  const ate = chaveDoDia(sabado);
-  return tarefas.filter(
-    (tarefa) => tarefa.dia && tarefa.dia >= de && tarefa.dia <= ate,
-  ).length;
+// ===== Indicadores e progresso =====
+function calcularIndicadores(itens) {
+  const total = itens.length;
+  const concluidas = itens.filter((item) => item.concluida).length;
+  return { total, concluidas, pendentes: total - concluidas };
 }
 
-function calcularIndicadores(tarefas) {
-  const total = tarefas.length;
-  const concluidas = tarefas.filter((tarefa) => tarefa.concluida).length;
-  return {
-    total,
-    concluidas,
-    pendentes: total - concluidas,
-    semana: tarefasDaSemana(tarefas),
-  };
-}
-
-function mostrarIndicadores(indicadores) {
+function mostrarIndicadores() {
+  const indicadores = calcularIndicadores(tarefasCarregadas);
   document.getElementById("kpi-total").textContent = indicadores.total;
   document.getElementById("kpi-concluidas").textContent =
     indicadores.concluidas;
   document.getElementById("kpi-pendentes").textContent = indicadores.pendentes;
-  document.getElementById("kpi-semana").textContent = indicadores.semana;
-}
-
-function mostrarContadores() {
-  const { total, concluidas, pendentes } =
-    calcularIndicadores(tarefasCarregadas);
-  document.getElementById("cont-todas").textContent = total;
-  document.getElementById("cont-pendentes").textContent = pendentes;
-  document.getElementById("cont-concluidas").textContent = concluidas;
+  document.getElementById("kpi-semana").textContent = itensSemana.length;
 }
 
 function mostrarProgresso() {
@@ -343,10 +376,20 @@ function mostrarAssuntos() {
   alvo.replaceChildren(rosca, legenda);
 }
 
+function itensDoDia(chave) {
+  const vistos = new Map();
+  [...itensAgenda, ...itensSemana].forEach((item) => {
+    if (item.dia === chave) {
+      vistos.set(item.id, item);
+    }
+  });
+  return [...vistos.values()];
+}
+
 function mostrarResumoDoDia() {
   const alvo = document.getElementById("resumo-dia");
   const chave = diaSelecionado || chaveDoDia(new Date());
-  const doDia = tarefasCarregadas.filter((tarefa) => tarefa.dia === chave);
+  const doDia = itensDoDia(chave);
   const titulo = criarElemento(
     "strong",
     "",
@@ -361,9 +404,9 @@ function mostrarResumoDoDia() {
     return;
   }
 
-  const concluidas = doDia.filter((tarefa) => tarefa.concluida).length;
+  const concluidas = doDia.filter((item) => item.concluida).length;
   const minutos = doDia.reduce(
-    (soma, tarefa) => soma + (tarefa.duracao_min || 0),
+    (soma, item) => soma + (item.duracao_min || 0),
     0,
   );
   const barra = criarElemento("div", "barra");
@@ -385,14 +428,44 @@ function mostrarAviso(texto, erro = false) {
   aviso.hidden = texto === "";
 }
 
+function janelaDaGrade() {
+  const primeiro = new Date(mesExibido.getFullYear(), mesExibido.getMonth(), 1);
+  const inicio = new Date(
+    primeiro.getFullYear(),
+    primeiro.getMonth(),
+    1 - primeiro.getDay(),
+  );
+  const fim = new Date(
+    inicio.getFullYear(),
+    inicio.getMonth(),
+    inicio.getDate() + 41,
+  );
+  return { de: chaveDoDia(inicio), ate: chaveDoDia(fim) };
+}
+
+function janelaDaSemana() {
+  const hoje = new Date();
+  const domingo = new Date(
+    hoje.getFullYear(),
+    hoje.getMonth(),
+    hoje.getDate() - hoje.getDay(),
+  );
+  const sabado = new Date(
+    domingo.getFullYear(),
+    domingo.getMonth(),
+    domingo.getDate() + 6,
+  );
+  return { de: chaveDoDia(domingo), ate: chaveDoDia(sabado) };
+}
+
 function atualizarTela() {
-  mostrarIndicadores(calcularIndicadores(tarefasCarregadas));
-  mostrarContadores();
+  mostrarIndicadores();
   mostrarProgresso();
   mostrarAssuntos();
   mostrarResumoDoDia();
   mostrarSugestoesDeCategoria();
   mostrarCalendario();
+  mostrarContadores();
   mostrarLista();
 }
 
@@ -400,8 +473,17 @@ async function carregarTarefas() {
   const botao = document.getElementById("tentar-novamente");
   botao.hidden = true;
   mostrarAviso("Carregando tarefas...");
+  const grade = janelaDaGrade();
+  const semana = janelaDaSemana();
   try {
-    tarefasCarregadas = await data.listar();
+    const [avulsas, daGrade, daSemana] = await Promise.all([
+      data.listar(),
+      data.agenda(grade.de, grade.ate, true),
+      data.agenda(semana.de, semana.ate),
+    ]);
+    tarefasCarregadas = avulsas;
+    itensAgenda = daGrade;
+    itensSemana = daSemana;
   } catch (erro) {
     mostrarAviso(
       "Não foi possível carregar as tarefas. Verifique se o servidor está rodando.",
@@ -413,6 +495,16 @@ async function carregarTarefas() {
   atualizarTela();
 }
 
+async function executarEAtualizar(acao) {
+  try {
+    await acao();
+  } catch (erro) {
+    mostrarAviso(erro.message, true);
+    return;
+  }
+  await carregarTarefas();
+}
+
 // ===== Lista de tarefas =====
 const ICONE_CHECK =
   '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 6.5l2.5 2.5 4.5-5"/></svg>';
@@ -421,40 +513,120 @@ const ICONE_EDITAR =
 const ICONE_EXCLUIR =
   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h10M6 4V2h4v2M5 4l.5 9h5L11 4"/></svg>';
 
-function compararTarefas(a, b) {
+function compararItens(a, b) {
   return (
     Number(a.concluida) - Number(b.concluida) ||
     (a.dia || "9999-99-99").localeCompare(b.dia || "9999-99-99") ||
     (a.hora || "99:99").localeCompare(b.hora || "99:99") ||
-    a.id - b.id
+    a.id.localeCompare(b.id)
   );
 }
 
-async function alternarConclusao(tarefa) {
-  try {
-    await data.atualizar(tarefa.id, { concluida: !tarefa.concluida });
-  } catch (erro) {
-    mostrarAviso(erro.message, true);
-    return;
+// O que a lista mostra: o dia escolhido ou, sem dia escolhido, o mês do calendário
+// (mais as tarefas sem dia).
+function itensDoEscopo() {
+  if (diaSelecionado) {
+    return itensAgenda.filter((item) => item.dia === diaSelecionado);
   }
-  await carregarTarefas();
+  const ano = mesExibido.getFullYear();
+  const mes = mesExibido.getMonth();
+  const primeiro = chaveDoDia(new Date(ano, mes, 1));
+  const ultimo = chaveDoDia(new Date(ano, mes + 1, 0));
+  return itensAgenda.filter(
+    (item) => item.dia === null || (item.dia >= primeiro && item.dia <= ultimo),
+  );
 }
 
-async function excluirTarefa(tarefa) {
-  if (
-    !window.confirm(
-      `Excluir a tarefa "${tarefa.titulo}"? Essa ação não pode ser desfeita.`,
-    )
-  ) {
+function mostrarContadores() {
+  const { total, concluidas, pendentes } = calcularIndicadores(itensDoEscopo());
+  document.getElementById("cont-todas").textContent = total;
+  document.getElementById("cont-pendentes").textContent = pendentes;
+  document.getElementById("cont-concluidas").textContent = concluidas;
+}
+
+async function alternarConclusao(item) {
+  await executarEAtualizar(() =>
+    item.tipo === "tarefa"
+      ? data.atualizar(item.tarefa_id, { concluida: !item.concluida })
+      : data.salvarOcorrencia(item.recorrencia_id, item.data_original, {
+          status: item.concluida ? "pendente" : "concluida",
+        }),
+  );
+}
+
+function perguntarEscopo(titulo, texto) {
+  const dialogo = document.getElementById("dialogo-escopo");
+  document.getElementById("escopo-titulo").textContent = titulo;
+  document.getElementById("escopo-texto").textContent = texto;
+  return new Promise((resolver) => {
+    let escolha = null;
+    const escolher = (valor) => () => {
+      escolha = valor;
+      dialogo.close();
+    };
+    document.getElementById("escopo-esta").onclick = escolher("esta");
+    document.getElementById("escopo-todas").onclick = escolher("todas");
+    document.getElementById("escopo-cancelar").onclick = escolher(null);
+    dialogo.addEventListener("close", () => resolver(escolha), { once: true });
+    dialogo.showModal();
+  });
+}
+
+async function editarItem(item) {
+  if (item.tipo === "tarefa") {
+    abrirDialogo("editar-tarefa", item);
     return;
   }
-  try {
-    await data.excluir(tarefa.id);
-  } catch (erro) {
-    mostrarAviso(erro.message, true);
+  const escopo = await perguntarEscopo(
+    "Editar tarefa recorrente",
+    `"${item.titulo}" se repete. Alterar só a ocorrência de ${rotuloDoDia(item.dia)} ou todas?`,
+  );
+  if (escopo === "esta") {
+    abrirDialogo("editar-ocorrencia", item);
+  } else if (escopo === "todas") {
+    try {
+      const regra = await data.buscarRecorrencia(item.recorrencia_id);
+      abrirDialogo("editar-regra", item, regra);
+    } catch (erro) {
+      mostrarAviso(erro.message, true);
+    }
+  }
+}
+
+async function excluirItem(item) {
+  if (item.tipo === "tarefa") {
+    if (
+      !window.confirm(
+        `Excluir a tarefa "${item.titulo}"? Essa ação não pode ser desfeita.`,
+      )
+    ) {
+      return;
+    }
+    await executarEAtualizar(() => data.excluir(item.tarefa_id));
     return;
   }
-  await carregarTarefas();
+  const escopo = await perguntarEscopo(
+    "Excluir tarefa recorrente",
+    `"${item.titulo}" se repete. Excluir só a ocorrência de ${rotuloDoDia(item.dia)} ou todas?`,
+  );
+  if (escopo === "esta") {
+    await executarEAtualizar(() =>
+      data.salvarOcorrencia(item.recorrencia_id, item.data_original, {
+        status: "cancelada",
+      }),
+    );
+  } else if (escopo === "todas") {
+    if (
+      !window.confirm(
+        `Excluir todas as ocorrências de "${item.titulo}"? Essa ação não pode ser desfeita.`,
+      )
+    ) {
+      return;
+    }
+    await executarEAtualizar(() =>
+      data.excluirRecorrencia(item.recorrencia_id),
+    );
+  }
 }
 
 function criarBotaoAcao(rotulo, icone, aoClicar, classeExtra = "") {
@@ -468,104 +640,112 @@ function criarBotaoAcao(rotulo, icone, aoClicar, classeExtra = "") {
   return botao;
 }
 
-function criarMeta(tarefa) {
+function criarMeta(item) {
   const meta = criarElemento("div", "meta");
-  if (tarefa.dia) {
-    let texto = rotuloDoDia(tarefa.dia);
-    if (tarefa.hora) {
-      texto += ` • ${tarefa.hora.slice(0, 5)}`;
+  if (item.dia) {
+    let texto = rotuloDoDia(item.dia);
+    if (item.hora) {
+      texto += ` • ${item.hora.slice(0, 5)}`;
     }
-    if (tarefa.duracao_min) {
-      texto += ` (${formatarDuracao(tarefa.duracao_min)})`;
+    if (item.duracao_min) {
+      texto += ` (${formatarDuracao(item.duracao_min)})`;
     }
     meta.appendChild(criarElemento("span", "tag-item tag-dia", texto));
   }
-  if (tarefa.categoria) {
+  if (item.tipo === "recorrente") {
+    meta.appendChild(criarElemento("span", "tag-item tag-repete", "↻ Repete"));
+  }
+  if (item.remarcada) {
     meta.appendChild(
-      criarElemento("span", "tag-item tag-categoria", tarefa.categoria),
+      criarElemento("span", "tag-item tag-remarcada", "Remarcada"),
     );
   }
-  if (tarefa.prioridade) {
+  if (item.categoria) {
+    meta.appendChild(
+      criarElemento("span", "tag-item tag-categoria", item.categoria),
+    );
+  }
+  if (item.prioridade) {
     meta.appendChild(
       criarElemento(
         "span",
-        `tag-item prioridade-${tarefa.prioridade}`,
-        ROTULOS_DE_PRIORIDADE[tarefa.prioridade] || tarefa.prioridade,
+        `tag-item prioridade-${item.prioridade}`,
+        ROTULOS_DE_PRIORIDADE[item.prioridade] || item.prioridade,
       ),
     );
   }
   return meta;
 }
 
-function criarItem(tarefa) {
-  const item = document.createElement("li");
-  item.className = tarefa.concluida ? "item concluida" : "item";
+function criarItem(item) {
+  const linha = document.createElement("li");
+  linha.className = item.concluida ? "item concluida" : "item";
 
   const marca = document.createElement("button");
   marca.type = "button";
   marca.className = "marca";
   marca.setAttribute(
     "aria-label",
-    tarefa.concluida
-      ? `Reabrir: ${tarefa.titulo}`
-      : `Concluir: ${tarefa.titulo}`,
+    item.concluida ? `Reabrir: ${item.titulo}` : `Concluir: ${item.titulo}`,
   );
-  if (tarefa.concluida) {
+  if (item.concluida) {
     marca.innerHTML = ICONE_CHECK;
   }
-  marca.addEventListener("click", () => alternarConclusao(tarefa));
+  marca.addEventListener("click", () => alternarConclusao(item));
 
   const corpo = criarElemento("div", "corpo-item");
-  corpo.appendChild(criarElemento("strong", "titulo", tarefa.titulo));
-  if (tarefa.descricao) {
-    corpo.appendChild(criarElemento("small", "descricao", tarefa.descricao));
+  corpo.appendChild(criarElemento("strong", "titulo", item.titulo));
+  if (item.descricao) {
+    corpo.appendChild(criarElemento("small", "descricao", item.descricao));
   }
-  const meta = criarMeta(tarefa);
+  const meta = criarMeta(item);
   if (meta.children.length > 0) {
     corpo.appendChild(meta);
   }
 
   const acoes = criarElemento("div", "acoes-item");
   acoes.append(
-    criarBotaoAcao(`Editar: ${tarefa.titulo}`, ICONE_EDITAR, () =>
-      abrirDialogo(tarefa),
+    criarBotaoAcao(`Editar: ${item.titulo}`, ICONE_EDITAR, () =>
+      editarItem(item),
     ),
     criarBotaoAcao(
-      `Excluir: ${tarefa.titulo}`,
+      `Excluir: ${item.titulo}`,
       ICONE_EXCLUIR,
-      () => excluirTarefa(tarefa),
+      () => excluirItem(item),
       "perigo",
     ),
   );
 
-  item.append(marca, corpo, acoes);
-  return item;
+  linha.append(marca, corpo, acoes);
+  return linha;
 }
 
 function mostrarLista() {
   const termo = normalizar(termoBusca.trim());
-  const visiveis = tarefasCarregadas.filter((tarefa) => {
-    if (filtroAtual === "pendentes" && tarefa.concluida) return false;
-    if (filtroAtual === "concluidas" && !tarefa.concluida) return false;
-    if (diaSelecionado && tarefa.dia !== diaSelecionado) return false;
+  const base = itensDoEscopo();
+  const visiveis = base.filter((item) => {
+    if (filtroAtual === "pendentes" && item.concluida) return false;
+    if (filtroAtual === "concluidas" && !item.concluida) return false;
     if (!termo) return true;
     return normalizar(
-      `${tarefa.titulo} ${tarefa.descricao || ""} ${tarefa.categoria || ""}`,
+      `${item.titulo} ${item.descricao || ""} ${item.categoria || ""}`,
     ).includes(termo);
   });
-  const ordenadas = [...visiveis].sort(compararTarefas);
-  document.getElementById("lista").replaceChildren(...ordenadas.map(criarItem));
+  const ordenados = [...visiveis].sort(compararItens);
+  document.getElementById("lista").replaceChildren(...ordenados.map(criarItem));
 
-  if (tarefasCarregadas.length === 0) {
+  if (ordenados.length > 0) {
+    mostrarAviso("");
+  } else if (tarefasCarregadas.length === 0 && itensAgenda.length === 0) {
     mostrarAviso("Nenhuma tarefa cadastrada ainda.");
-  } else if (ordenadas.length === 0) {
+  } else if (base.length === 0) {
     mostrarAviso(
-      diaSelecionado && !termo && filtroAtual === "todas"
+      diaSelecionado
         ? "Nenhuma tarefa neste dia."
-        : "Nenhuma tarefa encontrada com esse filtro, dia ou busca.",
+        : "Nenhuma tarefa neste mês.",
     );
   } else {
-    mostrarAviso("");
+    mostrarAviso("Nenhuma tarefa encontrada com esse filtro ou busca.");
   }
 }
 
@@ -587,9 +767,9 @@ function configurarFiltros() {
 // ===== Janela de nova tarefa e de edição =====
 function mostrarSugestoesDeCategoria() {
   const vistas = new Map();
-  tarefasCarregadas.forEach((tarefa) => {
-    if (tarefa.categoria && !vistas.has(normalizar(tarefa.categoria))) {
-      vistas.set(normalizar(tarefa.categoria), tarefa.categoria);
+  [...tarefasCarregadas, ...itensAgenda].forEach((item) => {
+    if (item.categoria && !vistas.has(normalizar(item.categoria))) {
+      vistas.set(normalizar(item.categoria), item.categoria);
     }
   });
   const opcoes = [...vistas.values()].sort().map((nome) => {
@@ -600,24 +780,69 @@ function mostrarSugestoesDeCategoria() {
   document.getElementById("categorias").replaceChildren(...opcoes);
 }
 
-function abrirDialogo(tarefa = null) {
-  tarefaEmEdicao = tarefa;
+function atualizarCamposDeRepeticao() {
+  const frequencia = document.getElementById("campo-repete").value;
+  const unidades = {
+    diaria: "dia(s)",
+    semanal: "semana(s)",
+    mensal: "mês(es)",
+  };
+  document.getElementById("campos-repeticao").hidden = frequencia === "";
+  document.getElementById("bloco-dias-semana").hidden =
+    frequencia !== "semanal";
+  document.getElementById("bloco-dia-mes").hidden = frequencia !== "mensal";
+  document.getElementById("unidade-intervalo").textContent =
+    unidades[frequencia] || "";
+}
+
+function abrirDialogo(modo = "nova", item = null, regra = null) {
+  modoDoDialogo = modo;
+  itemEmEdicao = item;
   document.getElementById("form-tarefa").reset();
   document.getElementById("erro-form").hidden = true;
-  document.getElementById("titulo-dialogo").textContent = tarefa
-    ? "Editar tarefa"
-    : "Nova tarefa";
 
+  const titulos = {
+    nova: "Nova tarefa",
+    "editar-tarefa": "Editar tarefa",
+    "editar-ocorrencia": "Editar esta ocorrência",
+    "editar-regra": "Editar tarefa recorrente",
+  };
+  const rotulosDoDia = {
+    "editar-regra": "Início",
+    "editar-ocorrencia": "Dia (para remarcar)",
+  };
+  document.getElementById("titulo-dialogo").textContent = titulos[modo];
+  document.getElementById("rotulo-dia").textContent =
+    rotulosDoDia[modo] || "Dia";
+  document.getElementById("dica-ocorrencia").hidden =
+    modo !== "editar-ocorrencia";
+  document.getElementById("bloco-repetir").hidden =
+    modo === "editar-tarefa" || modo === "editar-ocorrencia";
+
+  const fonte = regra || item;
   const preencher = (id, valor) => {
     document.getElementById(id).value = valor ?? "";
   };
-  preencher("campo-titulo", tarefa ? tarefa.titulo : "");
-  preencher("campo-descricao", tarefa ? tarefa.descricao : "");
-  preencher("campo-dia", tarefa ? tarefa.dia : diaSelecionado);
-  preencher("campo-hora", tarefa && tarefa.hora ? tarefa.hora.slice(0, 5) : "");
-  preencher("campo-duracao", tarefa ? tarefa.duracao_min : "");
-  preencher("campo-prioridade", tarefa ? tarefa.prioridade : "");
-  preencher("campo-categoria", tarefa ? tarefa.categoria : "");
+  preencher("campo-titulo", fonte ? fonte.titulo : "");
+  preencher("campo-descricao", fonte ? fonte.descricao : "");
+  preencher(
+    "campo-dia",
+    regra ? regra.inicio : item ? item.dia : diaSelecionado,
+  );
+  preencher("campo-hora", fonte && fonte.hora ? fonte.hora.slice(0, 5) : "");
+  preencher("campo-duracao", fonte ? fonte.duracao_min : "");
+  preencher("campo-prioridade", fonte ? fonte.prioridade : "");
+  preencher("campo-categoria", fonte ? fonte.categoria : "");
+
+  preencher("campo-repete", regra ? regra.frequencia : "");
+  preencher("campo-intervalo", regra ? regra.intervalo : 1);
+  preencher("campo-dia-mes", regra ? regra.dia_do_mes : "");
+  preencher("campo-fim", regra ? regra.fim : "");
+  const marcados = regra ? regra.dias_semana : [];
+  document.querySelectorAll('input[name="dia-semana"]').forEach((caixa) => {
+    caixa.checked = marcados.includes(Number(caixa.value));
+  });
+  atualizarCamposDeRepeticao();
 
   document.getElementById("dialogo-tarefa").showModal();
   document.getElementById("campo-titulo").focus();
@@ -625,26 +850,130 @@ function abrirDialogo(tarefa = null) {
 
 function lerFormulario() {
   const texto = (id) => document.getElementById(id).value.trim();
-  const duracao = texto("campo-duracao");
+  const numero = (id) => (texto(id) ? Number(texto(id)) : null);
   return {
     titulo: document.getElementById("campo-titulo").value,
     descricao: texto("campo-descricao") || null,
     dia: texto("campo-dia") || null,
     hora: texto("campo-hora") || null,
-    duracao_min: duracao ? Number(duracao) : null,
+    duracao_min: numero("campo-duracao"),
     prioridade: texto("campo-prioridade") || null,
     categoria: texto("campo-categoria") || null,
+    frequencia: texto("campo-repete") || null,
+    intervalo: numero("campo-intervalo") || 1,
+    dias_semana: [
+      ...document.querySelectorAll('input[name="dia-semana"]:checked'),
+    ].map((caixa) => Number(caixa.value)),
+    dia_do_mes: numero("campo-dia-mes"),
+    fim: texto("campo-fim") || null,
   };
 }
 
 function validarFormulario(campos) {
-  if (campos.hora && !campos.dia) {
+  const ocorrencia = modoDoDialogo === "editar-ocorrencia";
+  const repetivel =
+    modoDoDialogo === "nova" || modoDoDialogo === "editar-regra";
+  if (!ocorrencia && campos.hora && !campos.dia) {
     return "Informe o dia junto com a hora.";
   }
-  if (campos.duracao_min && !campos.hora) {
+  if (!ocorrencia && campos.duracao_min && !campos.hora) {
     return "Informe a hora de início para usar a duração.";
   }
+  if (modoDoDialogo === "editar-regra" && !campos.frequencia) {
+    return "Uma tarefa recorrente precisa de uma repetição. Para encerrar, defina um término ou exclua.";
+  }
+  if (repetivel && campos.frequencia) {
+    if (!campos.dia) {
+      return "Informe o dia de início da repetição.";
+    }
+    if (campos.fim && campos.fim < campos.dia) {
+      return "O término não pode ser antes do início.";
+    }
+  }
   return "";
+}
+
+function camposDaTarefa(campos) {
+  return {
+    titulo: campos.titulo,
+    descricao: campos.descricao,
+    dia: campos.dia,
+    hora: campos.hora,
+    duracao_min: campos.duracao_min,
+    prioridade: campos.prioridade,
+    categoria: campos.categoria,
+  };
+}
+
+function camposDaRecorrencia(campos) {
+  return {
+    titulo: campos.titulo,
+    descricao: campos.descricao,
+    categoria: campos.categoria,
+    prioridade: campos.prioridade,
+    hora: campos.hora,
+    duracao_min: campos.duracao_min,
+    frequencia: campos.frequencia,
+    intervalo: campos.intervalo,
+    dias_semana:
+      campos.frequencia === "semanal" && campos.dias_semana.length
+        ? campos.dias_semana
+        : null,
+    dia_do_mes: campos.frequencia === "mensal" ? campos.dia_do_mes : null,
+    inicio: campos.dia,
+    fim: campos.fim,
+  };
+}
+
+// Só o que mudou em relação ao que a ocorrência mostrava. Campo esvaziado (null)
+// volta ao valor da regra.
+function diferencasDaOcorrencia(item, campos) {
+  const horaAtual = item.hora ? item.hora.slice(0, 5) : null;
+  const comparacoes = {
+    titulo: [campos.titulo.trim(), item.titulo],
+    descricao: [campos.descricao, item.descricao || null],
+    hora: [campos.hora, horaAtual],
+    duracao_min: [campos.duracao_min, item.duracao_min],
+    prioridade: [campos.prioridade, item.prioridade],
+    categoria: [campos.categoria, item.categoria],
+  };
+  const mudancas = {};
+  Object.entries(comparacoes).forEach(([nome, [novo, atual]]) => {
+    if (novo !== atual) {
+      mudancas[nome] = novo;
+    }
+  });
+  if (campos.dia && campos.dia !== item.dia) {
+    mudancas.dia = campos.dia;
+  }
+  return mudancas;
+}
+
+async function salvarFormulario(campos) {
+  if (modoDoDialogo === "editar-tarefa") {
+    return data.atualizar(itemEmEdicao.tarefa_id, camposDaTarefa(campos));
+  }
+  if (modoDoDialogo === "editar-ocorrencia") {
+    const mudancas = diferencasDaOcorrencia(itemEmEdicao, campos);
+    if (Object.keys(mudancas).length === 0) {
+      return null;
+    }
+    return data.salvarOcorrencia(
+      itemEmEdicao.recorrencia_id,
+      itemEmEdicao.data_original,
+      mudancas,
+    );
+  }
+  if (modoDoDialogo === "editar-regra") {
+    return data.atualizarRecorrencia(
+      itemEmEdicao.recorrencia_id,
+      camposDaRecorrencia(campos),
+    );
+  }
+  if (campos.frequencia) {
+    return data.criarRecorrencia(camposDaRecorrencia(campos));
+  }
+  return data.criar(camposDaTarefa(campos));
 }
 
 function configurarDialogoDeTarefa() {
@@ -653,10 +982,13 @@ function configurarDialogoDeTarefa() {
 
   document
     .getElementById("nova-tarefa")
-    .addEventListener("click", () => abrirDialogo());
+    .addEventListener("click", () => abrirDialogo("nova"));
   document
     .getElementById("cancelar-tarefa")
     .addEventListener("click", () => dialogo.close());
+  document
+    .getElementById("campo-repete")
+    .addEventListener("change", atualizarCamposDeRepeticao);
 
   document
     .getElementById("form-tarefa")
@@ -670,11 +1002,7 @@ function configurarDialogoDeTarefa() {
         return;
       }
       try {
-        if (tarefaEmEdicao) {
-          await data.atualizar(tarefaEmEdicao.id, campos);
-        } else {
-          await data.criar(campos);
-        }
+        await salvarFormulario(campos);
       } catch (falha) {
         erro.textContent = falha.message;
         erro.hidden = false;
@@ -715,6 +1043,7 @@ function selecionarDia(chave) {
   atualizarChipDoDia();
   mostrarCalendario();
   mostrarResumoDoDia();
+  mostrarContadores();
   mostrarLista();
 }
 
@@ -725,9 +1054,9 @@ function mostrarCalendario() {
     `${MESES_COMPLETOS[mes]} de ${ano}`;
 
   const contagemPorDia = {};
-  tarefasCarregadas.forEach((tarefa) => {
-    if (tarefa.dia) {
-      contagemPorDia[tarefa.dia] = (contagemPorDia[tarefa.dia] || 0) + 1;
+  itensAgenda.forEach((item) => {
+    if (item.dia) {
+      contagemPorDia[item.dia] = (contagemPorDia[item.dia] || 0) + 1;
     }
   });
 
@@ -756,13 +1085,15 @@ function mostrarCalendario() {
   document.getElementById("grade").replaceChildren(...celulas);
 }
 
-function mudarMes(delta) {
+async function mudarMes(delta) {
   mesExibido = new Date(
     mesExibido.getFullYear(),
     mesExibido.getMonth() + delta,
     1,
   );
-  mostrarCalendario();
+  diaSelecionado = null;
+  atualizarChipDoDia();
+  await carregarTarefas();
 }
 
 // ===== Início =====

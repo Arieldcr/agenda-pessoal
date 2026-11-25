@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from backend import database, rotas_recorrencia
+from backend import database, rotas_agenda, rotas_recorrencia
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -123,7 +123,7 @@ def excluir_tarefa(tarefa_id: int):
         raise HTTPException(status_code=404, detail="Tarefa não encontrada")
     
 app.include_router(rotas_recorrencia.router)
-
+app.include_router(rotas_agenda.router)
 # O frontend (HTML, CSS e JavaScript) é entregue em /app/.
 # O mount fica por último, para não interferir nas rotas da API.
 PASTA_FRONTEND = Path(__file__).resolve().parent.parent / "frontend"

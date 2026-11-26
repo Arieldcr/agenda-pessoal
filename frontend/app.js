@@ -144,10 +144,29 @@ const data = {
       "Não foi possível alterar a ocorrência.",
     );
   },
+
+  alterarASeguir(recorrenciaId, dia, campos) {
+    return enviar(
+      "PATCH",
+      `/recorrencias/${recorrenciaId}/a-partir-de/${dia}`,
+      campos,
+      "Não foi possível alterar as próximas ocorrências.",
+    );
+  },
+
+  async excluirASeguir(recorrenciaId, dia) {
+    const resposta = await fetch(
+      `/recorrencias/${recorrenciaId}/a-partir-de/${dia}`,
+      { method: "DELETE" },
+    );
+    if (!resposta.ok && resposta.status !== 404) {
+      throw new Error("Não foi possível excluir as próximas ocorrências.");
+    }
+  },
 };
 
 // ===== Estado da tela =====
-let tarefasCarregadas = []; // tarefas avulsas: indicadores, progresso e assuntos
+let tarefasCarregadas = []; // tarefas avulsas: indicadores do topo
 let itensAgenda = []; // agenda da grade do calendário, com as tarefas sem dia
 let itensSemana = []; // agenda da semana atual
 let filtroAtual = "todas";
@@ -295,7 +314,7 @@ function configurarAtalhoDeBusca() {
   });
 }
 
-// ===== Indicadores e progresso =====
+// ===== Indicadores do topo e progresso do dia =====
 function calcularIndicadores(itens) {
   const total = itens.length;
   const concluidas = itens.filter((item) => item.concluida).length;
@@ -311,8 +330,17 @@ function mostrarIndicadores() {
   document.getElementById("kpi-semana").textContent = itensSemana.length;
 }
 
+function chaveDoDiaEmFoco() {
+  return diaSelecionado || chaveDoDia(new Date());
+}
+
 function mostrarProgresso() {
-  const { total, concluidas } = calcularIndicadores(tarefasCarregadas);
+  const chave = chaveDoDiaEmFoco();
+  const { total, concluidas } = calcularIndicadores(itensDoDia(chave));
+  const rotulo = document.querySelector(".progresso .legenda span");
+  if (rotulo) {
+    rotulo.textContent = `Progresso: ${rotuloDoDia(chave)}`;
+  }
   const percentual = total === 0 ? 0 : Math.round((concluidas / total) * 100);
   const anel = document.getElementById("anel");
   anel.style.setProperty("--percentual", `${percentual}%`);
@@ -326,7 +354,7 @@ function mostrarProgresso() {
 function mostrarAssuntos() {
   const alvo = document.getElementById("assuntos");
   const contagem = new Map();
-  tarefasCarregadas.forEach((tarefa) => {
+  itensDoDia(chaveDoDiaEmFoco()).forEach((tarefa) => {
     if (!tarefa.categoria) {
       return;
     }
@@ -344,7 +372,7 @@ function mostrarAssuntos() {
       criarElemento(
         "p",
         "vazio-nota",
-        "Por assunto: aparece quando você der uma categoria às tarefas.",
+        "Por assunto: sem tarefas com categoria neste dia.",
       ),
     );
     return;
@@ -565,6 +593,7 @@ function perguntarEscopo(titulo, texto) {
       dialogo.close();
     };
     document.getElementById("escopo-esta").onclick = escolher("esta");
+    document.getElementById("escopo-seguintes").onclick = escolher("seguintes");
     document.getElementById("escopo-todas").onclick = escolher("todas");
     document.getElementById("escopo-cancelar").onclick = escolher(null);
     dialogo.addEventListener("close", () => resolver(escolha), { once: true });
@@ -579,14 +608,18 @@ async function editarItem(item) {
   }
   const escopo = await perguntarEscopo(
     "Editar tarefa recorrente",
-    `"${item.titulo}" se repete. Alterar só a ocorrência de ${rotuloDoDia(item.dia)} ou todas?`,
+    `"${item.titulo}" se repete. Alterar só a ocorrência de ${rotuloDoDia(item.dia)}, esta e as próximas, ou todas?`,
   );
   if (escopo === "esta") {
     abrirDialogo("editar-ocorrencia", item);
-  } else if (escopo === "todas") {
+  } else if (escopo === "todas" || escopo === "seguintes") {
     try {
       const regra = await data.buscarRecorrencia(item.recorrencia_id);
-      abrirDialogo("editar-regra", item, regra);
+      abrirDialogo(
+        escopo === "todas" ? "editar-regra" : "editar-seguintes",
+        item,
+        regra,
+      );
     } catch (erro) {
       mostrarAviso(erro.message, true);
     }
@@ -607,13 +640,21 @@ async function excluirItem(item) {
   }
   const escopo = await perguntarEscopo(
     "Excluir tarefa recorrente",
-    `"${item.titulo}" se repete. Excluir só a ocorrência de ${rotuloDoDia(item.dia)} ou todas?`,
+    `"${item.titulo}" se repete. Excluir só a ocorrência de ${rotuloDoDia(item.dia)}, esta e as próximas, ou todas?`,
   );
   if (escopo === "esta") {
     await executarEAtualizar(() =>
       data.salvarOcorrencia(item.recorrencia_id, item.data_original, {
         status: "cancelada",
       }),
+    );
+  } else if (escopo === "seguintes") {
+    const aviso = `Excluir ${rotuloDoDia(item.dia)} e as próximas ocorrências de "${item.titulo}"? Essa ação não pode ser desfeita.`;
+    if (!window.confirm(aviso)) {
+      return;
+    }
+    await executarEAtualizar(() =>
+      data.excluirASeguir(item.recorrencia_id, item.data_original),
     );
   } else if (escopo === "todas") {
     if (
@@ -806,9 +847,11 @@ function abrirDialogo(modo = "nova", item = null, regra = null) {
     "editar-tarefa": "Editar tarefa",
     "editar-ocorrencia": "Editar esta ocorrência",
     "editar-regra": "Editar tarefa recorrente",
+    "editar-seguintes": "Editar esta e as próximas",
   };
   const rotulosDoDia = {
     "editar-regra": "Início",
+    "editar-seguintes": "A partir de",
     "editar-ocorrencia": "Dia (para remarcar)",
   };
   document.getElementById("titulo-dialogo").textContent = titulos[modo];
@@ -825,10 +868,15 @@ function abrirDialogo(modo = "nova", item = null, regra = null) {
   };
   preencher("campo-titulo", fonte ? fonte.titulo : "");
   preencher("campo-descricao", fonte ? fonte.descricao : "");
-  preencher(
-    "campo-dia",
-    regra ? regra.inicio : item ? item.dia : diaSelecionado,
-  );
+  const diaDoCampo =
+    modo === "editar-seguintes"
+      ? item.data_original
+      : regra
+        ? regra.inicio
+        : item
+          ? item.dia
+          : diaSelecionado;
+  preencher("campo-dia", diaDoCampo);
   preencher("campo-hora", fonte && fonte.hora ? fonte.hora.slice(0, 5) : "");
   preencher("campo-duracao", fonte ? fonte.duracao_min : "");
   preencher("campo-prioridade", fonte ? fonte.prioridade : "");
@@ -871,16 +919,24 @@ function lerFormulario() {
 
 function validarFormulario(campos) {
   const ocorrencia = modoDoDialogo === "editar-ocorrencia";
-  const repetivel =
-    modoDoDialogo === "nova" || modoDoDialogo === "editar-regra";
+  const emSerie =
+    modoDoDialogo === "editar-regra" || modoDoDialogo === "editar-seguintes";
+  const repetivel = modoDoDialogo === "nova" || emSerie;
   if (!ocorrencia && campos.hora && !campos.dia) {
     return "Informe o dia junto com a hora.";
   }
   if (!ocorrencia && campos.duracao_min && !campos.hora) {
     return "Informe a hora de início para usar a duração.";
   }
-  if (modoDoDialogo === "editar-regra" && !campos.frequencia) {
+  if (emSerie && !campos.frequencia) {
     return "Uma tarefa recorrente precisa de uma repetição. Para encerrar, defina um término ou exclua.";
+  }
+  if (
+    modoDoDialogo === "editar-seguintes" &&
+    campos.dia &&
+    campos.dia < itemEmEdicao.data_original
+  ) {
+    return "A nova série não pode começar antes desta ocorrência.";
   }
   if (repetivel && campos.frequencia) {
     if (!campos.dia) {
@@ -964,6 +1020,13 @@ async function salvarFormulario(campos) {
       mudancas,
     );
   }
+  if (modoDoDialogo === "editar-seguintes") {
+    return data.alterarASeguir(
+      itemEmEdicao.recorrencia_id,
+      itemEmEdicao.data_original,
+      camposDaRecorrencia(campos),
+    );
+  }
   if (modoDoDialogo === "editar-regra") {
     return data.atualizarRecorrencia(
       itemEmEdicao.recorrencia_id,
@@ -1042,6 +1105,8 @@ function selecionarDia(chave) {
   diaSelecionado = diaSelecionado === chave ? null : chave;
   atualizarChipDoDia();
   mostrarCalendario();
+  mostrarProgresso();
+  mostrarAssuntos();
   mostrarResumoDoDia();
   mostrarContadores();
   mostrarLista();

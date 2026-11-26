@@ -1,12 +1,12 @@
 """Tabelas e operações das tarefas recorrentes: a regra e o estado de cada ocorrência."""
 
-from datetime import date, time
+from datetime import date, time, timedelta
 
 from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, Session, SQLModel, select
 
 from backend import database
-from backend.recorrencia import Regra, ocorrencias
+from backend.recorrencia import PERIODO_MAXIMO_DIAS, Regra, ocorrencias
 
 
 class Recorrencia(SQLModel, table=True):
@@ -197,3 +197,101 @@ def excluir_ocorrencia(recorrencia_id: int, dia_original: date) -> bool:
         sessao.delete(excecao)
         sessao.commit()
         return True
+
+
+
+def _ha_ocorrencia_antes(regra: Regra, dia: date) -> bool:
+    """Existe alguma ocorrência da regra antes de `dia`?"""
+    fim = dia - timedelta(days=1)
+    while fim >= regra.inicio:
+        inicio = max(regra.inicio, fim - timedelta(days=PERIODO_MAXIMO_DIAS))
+        if ocorrencias(regra, inicio, fim):
+            return True
+        fim = inicio - timedelta(days=1)
+    return False
+
+
+def _estados_a_partir_de(sessao: Session, recorrencia_id: int, dia: date) -> list[Ocorrencia]:
+    return list(
+        sessao.exec(
+            select(Ocorrencia).where(
+                Ocorrencia.recorrencia_id == recorrencia_id,
+                Ocorrencia.data_original >= dia,
+            )
+        ).all()
+    )
+
+
+def dividir_recorrencia(recorrencia_id: int, a_partir_de: date, campos: dict) -> Recorrencia | None:
+    """Altera esta ocorrência e as próximas.
+
+    A regra antiga termina na véspera e uma regra nova, com as mudanças, começa em
+    `a_partir_de`. O estado das datas seguintes que continuam existindo passa para a
+    regra nova. Se nada vem antes, é o mesmo que alterar a regra inteira.
+    Devolve None se a regra não existe ou se a data não é uma ocorrência dela.
+    """
+    with Session(database.engine) as sessao:
+        antiga = sessao.get(Recorrencia, recorrencia_id)
+        if antiga is None:
+            return None
+        regra_antiga = regra_da_recorrencia(antiga)
+        if a_partir_de not in ocorrencias(regra_antiga, a_partir_de, a_partir_de):
+            return None
+        campos = _dias_como_texto(campos)
+        for nome in campos:
+            if nome not in CAMPOS_RECORRENCIA:
+                raise ValueError(f"Campo não editável: {nome}")
+
+        if not _ha_ocorrencia_antes(regra_antiga, a_partir_de):
+            for nome, valor in campos.items():
+                setattr(antiga, nome, valor)
+            _preparar_recorrencia(antiga)
+            sessao.commit()
+            sessao.refresh(antiga)
+            return antiga
+
+        dados = {nome: getattr(antiga, nome) for nome in CAMPOS_RECORRENCIA}
+        dados["inicio"] = a_partir_de
+        dados.update(campos)
+        if dados["inicio"] < a_partir_de:
+            raise ValueError("A nova série não pode começar antes desta ocorrência.")
+        nova = Recorrencia(**dados)
+        _preparar_recorrencia(nova)  # confere tudo antes de mexer na regra antiga
+
+        antiga.fim = a_partir_de - timedelta(days=1)
+        sessao.add(nova)
+        sessao.flush()  # gera o id da regra nova
+        regra_nova = regra_da_recorrencia(nova)
+        for estado in _estados_a_partir_de(sessao, antiga.id, a_partir_de):
+            if estado.data_original in ocorrencias(regra_nova, estado.data_original, estado.data_original):
+                estado.recorrencia_id = nova.id
+            else:
+                sessao.delete(estado)
+        sessao.commit()
+        sessao.refresh(nova)
+        return nova
+
+
+def encerrar_a_partir_de(recorrencia_id: int, a_partir_de: date) -> bool:
+    """Exclui esta ocorrência e as próximas. False se a data não é uma ocorrência."""
+    with Session(database.engine) as sessao:
+        recorrencia = sessao.get(Recorrencia, recorrencia_id)
+        if recorrencia is None:
+            return False
+        regra = regra_da_recorrencia(recorrencia)
+        if a_partir_de not in ocorrencias(regra, a_partir_de, a_partir_de):
+            return False
+
+        if _ha_ocorrencia_antes(regra, a_partir_de):
+            for estado in _estados_a_partir_de(sessao, recorrencia_id, a_partir_de):
+                sessao.delete(estado)
+            recorrencia.fim = a_partir_de - timedelta(days=1)
+        else:
+            estados = sessao.exec(
+                select(Ocorrencia).where(Ocorrencia.recorrencia_id == recorrencia_id)
+            ).all()
+            for estado in estados:
+                sessao.delete(estado)
+            sessao.delete(recorrencia)
+        sessao.commit()
+        return True  

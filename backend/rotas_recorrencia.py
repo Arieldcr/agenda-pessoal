@@ -189,3 +189,24 @@ def salvar_ocorrencia(recorrencia_id: int, dia: date, dados: OcorrenciaAtualizar
 def voltar_ocorrencia_ao_padrao(recorrencia_id: int, dia: date):
     if not db_recorrencia.excluir_ocorrencia(recorrencia_id, dia):
         raise HTTPException(status_code=404, detail="Ocorrência sem alterações")
+
+
+
+@router.patch(
+    "/recorrencias/{recorrencia_id}/a-partir-de/{dia}", response_model=RecorrenciaResposta
+)
+def alterar_a_partir_de(recorrencia_id: int, dia: date, dados: RecorrenciaAtualizar):
+    campos = dados.model_dump(exclude_unset=True)
+    try:
+        recorrencia = db_recorrencia.dividir_recorrencia(recorrencia_id, dia, campos)
+    except ValueError as erro:
+        raise HTTPException(status_code=422, detail=str(erro))
+    if recorrencia is None:
+        raise HTTPException(status_code=404, detail="Ocorrência não encontrada")
+    return resposta_da_recorrencia(recorrencia)
+
+
+@router.delete("/recorrencias/{recorrencia_id}/a-partir-de/{dia}", status_code=204)
+def excluir_a_partir_de(recorrencia_id: int, dia: date):
+    if not db_recorrencia.encerrar_a_partir_de(recorrencia_id, dia):
+        raise HTTPException(status_code=404, detail="Ocorrência não encontrada")

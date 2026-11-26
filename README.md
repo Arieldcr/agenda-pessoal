@@ -4,7 +4,7 @@ _Kaizen_ (改善) é uma palavra japonesa que significa "melhoria contínua": me
 
 Aplicação web para organizar compromissos, tarefas e rotina pessoal, desenvolvida para uso próprio e executada localmente.
 
-> **Status:** em desenvolvimento. A API e a interface web permitem organizar tarefas com dia, hora, duração, prioridade e categoria. A API e a entrega da interface têm testes automatizados.
+> **Status:** em desenvolvimento. A API e a interface web permitem organizar tarefas com dia, hora, duração, prioridade e categoria, inclusive tarefas que se repetem (diária, semanal e mensal). A API, a agenda e a entrega da interface têm testes automatizados.
 
 ## Objetivo
 
@@ -44,8 +44,20 @@ Com o servidor rodando, abra http://127.0.0.1:8000/app/ no navegador. O painel p
 - usar a tela em celulares e janelas menores.
 - cadastrar dia, hora, duração, prioridade e categoria; clicar em um dia do calendário mostra só as tarefas dele (tarefas sem dia aparecem na visão geral);
 - ver quantas tarefas há nesta semana (domingo a sábado), a divisão por categoria e o resumo do dia.
+- cadastrar tarefas que se repetem e alterar só uma ocorrência, esta e as próximas, ou todas;
 
 Campos que a API ainda não tem (categoria, prioridade, data e hora) aparecem como espaços tracejados e entram em capítulos futuros. Por isso a lista mostra todas as tarefas em qualquer dia. A interface usa HTML, CSS e JavaScript puros, na pasta `frontend/`, entregue pelo próprio FastAPI.
+
+## Tarefas recorrentes
+
+Uma tarefa pode se repetir todos os dias, toda semana (em dias escolhidos) ou todo mês, de N em N, com data de início e término opcional. O Kaizen guarda **só a regra**: as ocorrências são calculadas para o período consultado, sem criar tarefas futuras no banco. Só a ocorrência que ganha estado próprio (concluída, cancelada, remarcada ou alterada) vira um registro.
+
+- `POST/GET/PATCH/DELETE /recorrencias`: as regras.
+- `PUT/DELETE /recorrencias/{id}/ocorrencias/{data}`: estado de uma data (concluir, cancelar, remarcar, alterar), sem duplicar.
+- `PATCH/DELETE /recorrencias/{id}/a-partir-de/{data}`: alterar ou excluir esta e as próximas, dividindo a regra em duas.
+- `GET /agenda?de=...&ate=...`: tarefas avulsas e ocorrências do período, no mesmo formato (até 400 dias; `sem_dia=true` inclui as tarefas sem dia).
+
+Regras: no mensal, o dia 31 em um mês mais curto cai no último dia; a semana começa no domingo; a ocorrência cancelada some da agenda.
 
 ## Tecnologias
 
@@ -127,7 +139,7 @@ Eles **nunca usam o banco real**: a cada teste, o banco é trocado por um arquiv
 
 ## Próximas etapas (planejadas)
 
-Recorrência de tarefas, histórico de alterações, relatórios, lembretes e notificações. Nada disso está implementado ainda.
+Histórico de alterações, relatórios, lembretes e notificações. Nada disso está implementado ainda.
 
 ## Autor
 

@@ -1458,3 +1458,12 @@ button.dia:hover {
 .acoes-coluna button {
   width: 100%;
 }
+
+/* ===== Botões do diálogo com o mesmo tamanho ===== */
+.dialogo .acoes button,
+.dialogo .acoes-coluna button {
+  height: 38px;
+  padding: 0 22px;
+  border-radius: 99px;
+  font-size: 13px;
+}

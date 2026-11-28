@@ -582,94 +582,6 @@ async function alternarConclusao(item) {
   );
 }
 
-function perguntarEscopo(titulo, texto) {
-  const dialogo = document.getElementById("dialogo-escopo");
-  document.getElementById("escopo-titulo").textContent = titulo;
-  document.getElementById("escopo-texto").textContent = texto;
-  return new Promise((resolver) => {
-    let escolha = null;
-    const escolher = (valor) => () => {
-      escolha = valor;
-      dialogo.close();
-    };
-    document.getElementById("escopo-esta").onclick = escolher("esta");
-    document.getElementById("escopo-seguintes").onclick = escolher("seguintes");
-    document.getElementById("escopo-todas").onclick = escolher("todas");
-    document.getElementById("escopo-cancelar").onclick = escolher(null);
-    dialogo.addEventListener("close", () => resolver(escolha), { once: true });
-    dialogo.showModal();
-  });
-}
-
-async function editarItem(item) {
-  if (item.tipo === "tarefa") {
-    abrirDialogo("editar-tarefa", item);
-    return;
-  }
-  const escopo = await perguntarEscopo(
-    "Editar tarefa recorrente",
-    `"${item.titulo}" se repete. Alterar só a ocorrência de ${rotuloDoDia(item.dia)}, esta e as próximas, ou todas?`,
-  );
-  if (escopo === "esta") {
-    abrirDialogo("editar-ocorrencia", item);
-  } else if (escopo === "todas" || escopo === "seguintes") {
-    try {
-      const regra = await data.buscarRecorrencia(item.recorrencia_id);
-      abrirDialogo(
-        escopo === "todas" ? "editar-regra" : "editar-seguintes",
-        item,
-        regra,
-      );
-    } catch (erro) {
-      mostrarAviso(erro.message, true);
-    }
-  }
-}
-
-async function excluirItem(item) {
-  if (item.tipo === "tarefa") {
-    if (
-      !window.confirm(
-        `Excluir a tarefa "${item.titulo}"? Essa ação não pode ser desfeita.`,
-      )
-    ) {
-      return;
-    }
-    await executarEAtualizar(() => data.excluir(item.tarefa_id));
-    return;
-  }
-  const escopo = await perguntarEscopo(
-    "Excluir tarefa recorrente",
-    `"${item.titulo}" se repete. Excluir só a ocorrência de ${rotuloDoDia(item.dia)}, esta e as próximas, ou todas?`,
-  );
-  if (escopo === "esta") {
-    await executarEAtualizar(() =>
-      data.salvarOcorrencia(item.recorrencia_id, item.data_original, {
-        status: "cancelada",
-      }),
-    );
-  } else if (escopo === "seguintes") {
-    const aviso = `Excluir ${rotuloDoDia(item.dia)} e as próximas ocorrências de "${item.titulo}"? Essa ação não pode ser desfeita.`;
-    if (!window.confirm(aviso)) {
-      return;
-    }
-    await executarEAtualizar(() =>
-      data.excluirASeguir(item.recorrencia_id, item.data_original),
-    );
-  } else if (escopo === "todas") {
-    if (
-      !window.confirm(
-        `Excluir todas as ocorrências de "${item.titulo}"? Essa ação não pode ser desfeita.`,
-      )
-    ) {
-      return;
-    }
-    await executarEAtualizar(() =>
-      data.excluirRecorrencia(item.recorrencia_id),
-    );
-  }
-}
-
 function criarBotaoAcao(rotulo, icone, aoClicar, classeExtra = "") {
   const botao = document.createElement("button");
   botao.type = "button";
@@ -836,66 +748,6 @@ function atualizarCamposDeRepeticao() {
     unidades[frequencia] || "";
 }
 
-function abrirDialogo(modo = "nova", item = null, regra = null) {
-  modoDoDialogo = modo;
-  itemEmEdicao = item;
-  document.getElementById("form-tarefa").reset();
-  document.getElementById("erro-form").hidden = true;
-
-  const titulos = {
-    nova: "Nova tarefa",
-    "editar-tarefa": "Editar tarefa",
-    "editar-ocorrencia": "Editar esta ocorrência",
-    "editar-regra": "Editar tarefa recorrente",
-    "editar-seguintes": "Editar esta e as próximas",
-  };
-  const rotulosDoDia = {
-    "editar-regra": "Início",
-    "editar-seguintes": "A partir de",
-    "editar-ocorrencia": "Dia (para remarcar)",
-  };
-  document.getElementById("titulo-dialogo").textContent = titulos[modo];
-  document.getElementById("rotulo-dia").textContent =
-    rotulosDoDia[modo] || "Dia";
-  document.getElementById("dica-ocorrencia").hidden =
-    modo !== "editar-ocorrencia";
-  document.getElementById("bloco-repetir").hidden =
-    modo === "editar-tarefa" || modo === "editar-ocorrencia";
-
-  const fonte = regra || item;
-  const preencher = (id, valor) => {
-    document.getElementById(id).value = valor ?? "";
-  };
-  preencher("campo-titulo", fonte ? fonte.titulo : "");
-  preencher("campo-descricao", fonte ? fonte.descricao : "");
-  const diaDoCampo =
-    modo === "editar-seguintes"
-      ? item.data_original
-      : regra
-        ? regra.inicio
-        : item
-          ? item.dia
-          : diaSelecionado;
-  preencher("campo-dia", diaDoCampo);
-  preencher("campo-hora", fonte && fonte.hora ? fonte.hora.slice(0, 5) : "");
-  preencher("campo-duracao", fonte ? fonte.duracao_min : "");
-  preencher("campo-prioridade", fonte ? fonte.prioridade : "");
-  preencher("campo-categoria", fonte ? fonte.categoria : "");
-
-  preencher("campo-repete", regra ? regra.frequencia : "");
-  preencher("campo-intervalo", regra ? regra.intervalo : 1);
-  preencher("campo-dia-mes", regra ? regra.dia_do_mes : "");
-  preencher("campo-fim", regra ? regra.fim : "");
-  const marcados = regra ? regra.dias_semana : [];
-  document.querySelectorAll('input[name="dia-semana"]').forEach((caixa) => {
-    caixa.checked = marcados.includes(Number(caixa.value));
-  });
-  atualizarCamposDeRepeticao();
-
-  document.getElementById("dialogo-tarefa").showModal();
-  document.getElementById("campo-titulo").focus();
-}
-
 function lerFormulario() {
   const texto = (id) => document.getElementById(id).value.trim();
   const numero = (id) => (texto(id) ? Number(texto(id)) : null);
@@ -915,38 +767,6 @@ function lerFormulario() {
     dia_do_mes: numero("campo-dia-mes"),
     fim: texto("campo-fim") || null,
   };
-}
-
-function validarFormulario(campos) {
-  const ocorrencia = modoDoDialogo === "editar-ocorrencia";
-  const emSerie =
-    modoDoDialogo === "editar-regra" || modoDoDialogo === "editar-seguintes";
-  const repetivel = modoDoDialogo === "nova" || emSerie;
-  if (!ocorrencia && campos.hora && !campos.dia) {
-    return "Informe o dia junto com a hora.";
-  }
-  if (!ocorrencia && campos.duracao_min && !campos.hora) {
-    return "Informe a hora de início para usar a duração.";
-  }
-  if (emSerie && !campos.frequencia) {
-    return "Uma tarefa recorrente precisa de uma repetição. Para encerrar, defina um término ou exclua.";
-  }
-  if (
-    modoDoDialogo === "editar-seguintes" &&
-    campos.dia &&
-    campos.dia < itemEmEdicao.data_original
-  ) {
-    return "A nova série não pode começar antes desta ocorrência.";
-  }
-  if (repetivel && campos.frequencia) {
-    if (!campos.dia) {
-      return "Informe o dia de início da repetição.";
-    }
-    if (campos.fim && campos.fim < campos.dia) {
-      return "O término não pode ser antes do início.";
-    }
-  }
-  return "";
 }
 
 function camposDaTarefa(campos) {
@@ -1003,6 +823,49 @@ function diferencasDaOcorrencia(item, campos) {
     mudancas.dia = campos.dia;
   }
   return mudancas;
+}
+
+function tornarRecorrente(tarefaId, campos) {
+  return enviar(
+    "POST",
+    `/tarefas/${tarefaId}/recorrencia`,
+    campos,
+    "Não foi possível transformar a tarefa em recorrente.",
+  );
+}
+
+async function salvarFormulario(campos) {
+  if (modoDoDialogo === "editar-tarefa") {
+    if (campos.frequencia) {
+      return tornarRecorrente(
+        itemEmEdicao.tarefa_id,
+        camposDaRecorrencia(campos),
+      );
+    }
+    return data.atualizar(itemEmEdicao.tarefa_id, camposDaTarefa(campos));
+  }
+  if (modoDoDialogo === "editar-ocorrencia") {
+    const mudancas = diferencasDaOcorrencia(itemEmEdicao, campos);
+    if (Object.keys(mudancas).length === 0) {
+      return null;
+    }
+    return data.salvarOcorrencia(
+      itemEmEdicao.recorrencia_id,
+      itemEmEdicao.data_original,
+      mudancas,
+    );
+  }
+  if (modoDoDialogo === "editar-seguintes") {
+    return data.alterarASeguir(
+      itemEmEdicao.recorrencia_id,
+      itemEmEdicao.data_original,
+      camposDaRecorrencia(campos),
+    );
+  }
+  if (campos.frequencia) {
+    return data.criarRecorrencia(camposDaRecorrencia(campos));
+  }
+  return data.criar(camposDaTarefa(campos));
 }
 
 async function salvarFormulario(campos) {
@@ -1195,3 +1058,208 @@ async function iniciar() {
 }
 
 iniciar();
+
+// ===== Ajustes: escopo, edição e transformar em recorrente =====
+function perguntarEscopo(titulo, texto) {
+  const dialogo = document.getElementById("dialogo-escopo");
+  document.getElementById("escopo-titulo").textContent = titulo;
+  document.getElementById("escopo-texto").textContent = texto;
+  return new Promise((resolver) => {
+    let escolha = null;
+    const escolher = (valor) => () => {
+      escolha = valor;
+      dialogo.close();
+    };
+    document.getElementById("escopo-esta").onclick = escolher("esta");
+    document.getElementById("escopo-seguintes").onclick = escolher("seguintes");
+    document.getElementById("escopo-cancelar").onclick = escolher(null);
+    dialogo.addEventListener("close", () => resolver(escolha), { once: true });
+    dialogo.showModal();
+  });
+}
+
+async function editarItem(item) {
+  if (item.tipo === "tarefa") {
+    abrirDialogo("editar-tarefa", item);
+    return;
+  }
+  const escopo = await perguntarEscopo(
+    "Editar tarefa recorrente",
+    `"${item.titulo}" se repete. Alterar só ${rotuloDoDia(item.dia)} ou esta e as próximas?`,
+  );
+  if (escopo === "esta") {
+    abrirDialogo("editar-ocorrencia", item);
+  } else if (escopo === "seguintes") {
+    try {
+      const regra = await data.buscarRecorrencia(item.recorrencia_id);
+      abrirDialogo("editar-seguintes", item, regra);
+    } catch (erro) {
+      mostrarAviso(erro.message, true);
+    }
+  }
+}
+
+async function excluirItem(item) {
+  if (item.tipo === "tarefa") {
+    if (
+      !window.confirm(
+        `Excluir a tarefa "${item.titulo}"? Essa ação não pode ser desfeita.`,
+      )
+    ) {
+      return;
+    }
+    await executarEAtualizar(() => data.excluir(item.tarefa_id));
+    return;
+  }
+  const escopo = await perguntarEscopo(
+    "Excluir tarefa recorrente",
+    `"${item.titulo}" se repete. Excluir só ${rotuloDoDia(item.dia)} ou esta e as próximas?`,
+  );
+  if (escopo === "esta") {
+    await executarEAtualizar(() =>
+      data.salvarOcorrencia(item.recorrencia_id, item.data_original, {
+        status: "cancelada",
+      }),
+    );
+  } else if (escopo === "seguintes") {
+    const aviso = `Excluir ${rotuloDoDia(item.dia)} e as próximas ocorrências de "${item.titulo}"? Essa ação não pode ser desfeita.`;
+    if (!window.confirm(aviso)) {
+      return;
+    }
+    await executarEAtualizar(() =>
+      data.excluirASeguir(item.recorrencia_id, item.data_original),
+    );
+  }
+}
+
+function abrirDialogo(modo = "nova", item = null, regra = null) {
+  modoDoDialogo = modo;
+  itemEmEdicao = item;
+  document.getElementById("form-tarefa").reset();
+  document.getElementById("erro-form").hidden = true;
+
+  const titulos = {
+    nova: "Nova tarefa",
+    "editar-tarefa": "Editar tarefa",
+    "editar-ocorrencia": "Editar esta ocorrência",
+    "editar-seguintes": "Editar esta e as próximas",
+  };
+  const rotulosDoDia = {
+    "editar-seguintes": "A partir de",
+    "editar-ocorrencia": "Dia (para remarcar)",
+  };
+  const dicas = {
+    "editar-ocorrencia": "Campos esvaziados voltam ao padrão da repetição.",
+    "editar-tarefa":
+      "Escolha uma repetição para transformar esta tarefa em recorrente.",
+  };
+  document.getElementById("titulo-dialogo").textContent = titulos[modo];
+  document.getElementById("rotulo-dia").textContent =
+    rotulosDoDia[modo] || "Dia";
+  const dica = document.getElementById("dica-ocorrencia");
+  dica.textContent = dicas[modo] || "";
+  dica.hidden = !dicas[modo];
+  document.getElementById("bloco-repetir").hidden =
+    modo === "editar-ocorrencia";
+
+  const fonte = regra || item;
+  const preencher = (id, valor) => {
+    document.getElementById(id).value = valor ?? "";
+  };
+  preencher("campo-titulo", fonte ? fonte.titulo : "");
+  preencher("campo-descricao", fonte ? fonte.descricao : "");
+  preencher(
+    "campo-dia",
+    modo === "editar-seguintes"
+      ? item.data_original
+      : item
+        ? item.dia
+        : diaSelecionado,
+  );
+  preencher("campo-hora", fonte && fonte.hora ? fonte.hora.slice(0, 5) : "");
+  preencher("campo-duracao", fonte ? fonte.duracao_min : "");
+  preencher("campo-prioridade", fonte ? fonte.prioridade : "");
+  preencher("campo-categoria", fonte ? fonte.categoria : "");
+
+  preencher("campo-repete", regra ? regra.frequencia : "");
+  preencher("campo-intervalo", regra ? regra.intervalo : 1);
+  preencher("campo-dia-mes", regra ? regra.dia_do_mes : "");
+  preencher("campo-fim", regra ? regra.fim : "");
+  const marcados = regra ? regra.dias_semana : [];
+  document.querySelectorAll('input[name="dia-semana"]').forEach((caixa) => {
+    caixa.checked = marcados.includes(Number(caixa.value));
+  });
+  atualizarCamposDeRepeticao();
+
+  document.getElementById("dialogo-tarefa").showModal();
+  document.getElementById("campo-titulo").focus();
+}
+
+function validarFormulario(campos) {
+  const ocorrencia = modoDoDialogo === "editar-ocorrencia";
+  const seguintes = modoDoDialogo === "editar-seguintes";
+  if (!ocorrencia && campos.hora && !campos.dia) {
+    return "Informe o dia junto com a hora.";
+  }
+  if (!ocorrencia && campos.duracao_min && !campos.hora) {
+    return "Informe a hora de início para usar a duração.";
+  }
+  if (seguintes && !campos.frequencia) {
+    return "Uma tarefa recorrente precisa de uma repetição. Para encerrar, defina um término ou exclua.";
+  }
+  if (seguintes && campos.dia && campos.dia < itemEmEdicao.data_original) {
+    return "A nova série não pode começar antes desta ocorrência.";
+  }
+  if (!ocorrencia && campos.frequencia) {
+    if (!campos.dia) {
+      return "Informe o dia de início da repetição.";
+    }
+    if (campos.fim && campos.fim < campos.dia) {
+      return "O término não pode ser antes do início.";
+    }
+  }
+  return "";
+}
+
+function tornarRecorrente(tarefaId, campos) {
+  return enviar(
+    "POST",
+    `/tarefas/${tarefaId}/recorrencia`,
+    campos,
+    "Não foi possível transformar a tarefa em recorrente.",
+  );
+}
+
+async function salvarFormulario(campos) {
+  if (modoDoDialogo === "editar-tarefa") {
+    if (campos.frequencia) {
+      return tornarRecorrente(
+        itemEmEdicao.tarefa_id,
+        camposDaRecorrencia(campos),
+      );
+    }
+    return data.atualizar(itemEmEdicao.tarefa_id, camposDaTarefa(campos));
+  }
+  if (modoDoDialogo === "editar-ocorrencia") {
+    const mudancas = diferencasDaOcorrencia(itemEmEdicao, campos);
+    if (Object.keys(mudancas).length === 0) {
+      return null;
+    }
+    return data.salvarOcorrencia(
+      itemEmEdicao.recorrencia_id,
+      itemEmEdicao.data_original,
+      mudancas,
+    );
+  }
+  if (modoDoDialogo === "editar-seguintes") {
+    return data.alterarASeguir(
+      itemEmEdicao.recorrencia_id,
+      itemEmEdicao.data_original,
+      camposDaRecorrencia(campos),
+    );
+  }
+  if (campos.frequencia) {
+    return data.criarRecorrencia(camposDaRecorrencia(campos));
+  }
+  return data.criar(camposDaTarefa(campos));
+}

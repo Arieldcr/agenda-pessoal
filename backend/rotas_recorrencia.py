@@ -210,3 +210,17 @@ def alterar_a_partir_de(recorrencia_id: int, dia: date, dados: RecorrenciaAtuali
 def excluir_a_partir_de(recorrencia_id: int, dia: date):
     if not db_recorrencia.encerrar_a_partir_de(recorrencia_id, dia):
         raise HTTPException(status_code=404, detail="Ocorrência não encontrada")
+
+
+
+@router.post(
+    "/tarefas/{tarefa_id}/recorrencia", response_model=RecorrenciaResposta, status_code=201
+)
+def tornar_tarefa_recorrente(tarefa_id: int, dados: RecorrenciaCriar):
+    try:
+        recorrencia = db_recorrencia.transformar_em_recorrente(tarefa_id, dados.model_dump())
+    except ValueError as erro:
+        raise HTTPException(status_code=422, detail=str(erro))
+    if recorrencia is None:
+        raise HTTPException(status_code=404, detail="Tarefa não encontrada")
+    return resposta_da_recorrencia(recorrencia)

@@ -295,3 +295,33 @@ def encerrar_a_partir_de(recorrencia_id: int, a_partir_de: date) -> bool:
             sessao.delete(recorrencia)
         sessao.commit()
         return True  
+
+def transformar_em_recorrente(tarefa_id: int, campos: dict) -> Recorrencia | None:
+    """Troca uma tarefa avulsa por uma tarefa recorrente, de uma vez só.
+
+    A tarefa é apagada e a regra nova começa no `inicio` informado. Se a tarefa estava
+    concluída e a data dela é uma ocorrência da regra, essa ocorrência fica concluída.
+    Devolve None se a tarefa não existe.
+    """
+    with Session(database.engine) as sessao:
+        tarefa = sessao.get(database.Tarefa, tarefa_id)
+        if tarefa is None:
+            return None
+        recorrencia = Recorrencia(**_dias_como_texto(campos))
+        _preparar_recorrencia(recorrencia)  # se algo for inválido, a tarefa continua como está
+        sessao.add(recorrencia)
+        sessao.flush()  # gera o id da regra
+        if tarefa.concluida and tarefa.dia is not None:
+            regra = regra_da_recorrencia(recorrencia)
+            if tarefa.dia in ocorrencias(regra, tarefa.dia, tarefa.dia):
+                sessao.add(
+                    Ocorrencia(
+                        recorrencia_id=recorrencia.id,
+                        data_original=tarefa.dia,
+                        status="concluida",
+                    )
+                )
+        sessao.delete(tarefa)
+        sessao.commit()
+        sessao.refresh(recorrencia)
+        return recorrencia
